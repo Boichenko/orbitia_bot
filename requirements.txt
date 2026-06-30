@@ -1,0 +1,6 @@
+aiogram>=3.4,<4
+httpx>=0.27
+python-dotenv>=1.0
+timezonefinder>=6.5
+pyswisseph>=2.10
+anthropic>=0.40
