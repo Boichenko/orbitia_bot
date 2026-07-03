@@ -1,7 +1,7 @@
 from aiogram import Router
 from aiogram.filters import CommandObject, CommandStart
 from aiogram.fsm.context import FSMContext
-from aiogram.types import Message
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message
 
 from services.analytics import log_event, register_user_source
 from states import SolarStates
@@ -13,18 +13,21 @@ async def start_flow(answer_target, state: FSMContext) -> None:
     """Общая точка входа в диалог — используется и из /start, и из кнопки
     "Рассчитать другой соляр"."""
     await state.clear()
+    kb = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="💞 Синастрия / совместимость — 300 ⭐", callback_data="report:synastry")],
+            [InlineKeyboardButton(text="🌞 Соляр — 100 ⭐", callback_data="report:solar")],
+        ]
+    )
     await answer_target.answer(
         "Привет! Я Orbitia 🌞\n\n"
-        "Я считаю соляр — карту твоего персонального года, который начинается "
-        "в день рождения. Это не шаблонный гороскоп, а точный астрономический расчёт: "
-        "по нему видно, какие сферы жизни будут активнее всего в этом году, где ждать "
-        "роста, а где — напряжения, и почему. Поможет понять логику года и спланировать "
-        "его осознанно, а не наугад.\n\n"
-        "Считаю по реальным эфемеридам и даю развёрнутый разбор — по домам, "
-        "планетам и аспектам: карьера, отношения, деньги, здоровье и многое другое.\n\n"
-        "Для начала: как зовут человека, для которого считаем?"
+        "Я считаю соляр на персональный год и синастрию совместимости по данным "
+        "двух людей. Расчёт идёт по реальным эфемеридам, с развёрнутым разбором "
+        "планет, домов и аспектов.\n\n"
+        "Что хочешь рассчитать?",
+        reply_markup=kb,
     )
-    await state.set_state(SolarStates.waiting_name)
+    await state.set_state(SolarStates.choosing_report_type)
 
 
 @router.message(CommandStart())
