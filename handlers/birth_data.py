@@ -740,6 +740,7 @@ async def cmd_stats(message: Message):
         "birth_date_entered",
         "city_entered",
         "solar_generated",
+        "synastry_generated",
         "payment_started",
         "payment_success",
     ]
