@@ -15,8 +15,8 @@ async def start_flow(answer_target, state: FSMContext) -> None:
     await state.clear()
     kb = InlineKeyboardMarkup(
         inline_keyboard=[
-            [InlineKeyboardButton(text="💞 Синастрия / совместимость — 300 ⭐", callback_data="report:synastry")],
-            [InlineKeyboardButton(text="🌞 Соляр — 100 ⭐", callback_data="report:solar")],
+            [InlineKeyboardButton(text="💞 Синастрия / совместимость", callback_data="report:synastry")],
+            [InlineKeyboardButton(text="🌞 Соляр", callback_data="report:solar")],
         ]
     )
     await answer_target.answer(
