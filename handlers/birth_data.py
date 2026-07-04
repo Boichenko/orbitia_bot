@@ -30,6 +30,7 @@ from services.prompt_builder import (
     build_synastry_review_prompt,
 )
 from services.report_file import extract_main_theme
+from services.report_insights import build_solar_profile, build_synastry_profile
 from services.report_pdf import markdown_to_pdf
 from services.solar_chart import compute_solar_return
 from services.synastry_chart import compute_synastry
@@ -1158,7 +1159,12 @@ async def _run_solar_analysis(answer_target, from_user: User, state: FSMContext)
 
     output_path = f"/tmp/solar_{from_user.id}_{int(time.time())}.pdf"
     title = f"Соляр {data.get('person_name', '')}".strip()
-    markdown_to_pdf(title, buffer, output_path)
+    visual_profile = build_solar_profile(
+        chart_data,
+        person_name=data.get("person_name", ""),
+        cycle_year=cycle_year,
+    )
+    markdown_to_pdf(title, buffer, output_path, visual_profile=visual_profile)
 
     name_part = re.sub(r'[\\/:*?"<>|]', "", data.get("person_name", "")).strip()
     display_name = f"{name_part} {data['birth_date']} {cycle_year}-{cycle_year + 1}".strip()
@@ -1300,7 +1306,12 @@ async def _run_synastry_analysis(answer_target, from_user: User, state: FSMConte
 
     output_path = f"/tmp/synastry_{from_user.id}_{int(time.time())}.pdf"
     title = f"Синастрия {first_name} и {partner_name}".strip()
-    markdown_to_pdf(title, buffer, output_path)
+    visual_profile = build_synastry_profile(
+        chart_data,
+        first_name=first_name,
+        partner_name=partner_name,
+    )
+    markdown_to_pdf(title, buffer, output_path, visual_profile=visual_profile)
 
     safe_first = re.sub(r'[\\/:*?"<>|]', "", first_name).strip()
     safe_partner = re.sub(r'[\\/:*?"<>|]', "", partner_name).strip()
