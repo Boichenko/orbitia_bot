@@ -63,6 +63,7 @@ async def process_report_type(callback: CallbackQuery, state: FSMContext):
         await callback.message.answer("Не поняла тип расчёта. Нажми /start и выбери ещё раз.")
         return
 
+    log_event(callback.from_user.id, f"{report_type}_selected")
     await state.update_data(report_type=report_type)
     if report_type == "synastry":
         await callback.message.edit_text(
@@ -678,6 +679,7 @@ async def process_confirm_go(callback: CallbackQuery, state: FSMContext):
         return
 
     log_event(callback.from_user.id, "payment_started")
+    log_event(callback.from_user.id, f"{report_type}_payment_started")
     try:
         await callback.message.edit_text("Секунду, считаю короткий акцент по карте...")
     except Exception:
@@ -913,7 +915,9 @@ async def process_pre_checkout(query: PreCheckoutQuery):
 async def process_successful_payment(message: Message, state: FSMContext):
     log_event(message.from_user.id, "payment_success")
     data = await state.get_data()
-    if data.get("report_type") == "synastry":
+    report_type = data.get("report_type", "solar")
+    log_event(message.from_user.id, f"{report_type}_payment_success")
+    if report_type == "synastry":
         await message.answer("Оплата получена ⭐ Готовлю полную расшифровку синастрии...")
         await _run_synastry_analysis(message, message.from_user, state)
     else:
@@ -939,19 +943,37 @@ async def cmd_stats(message: Message):
     summary = funnel_summary()
     sources = list_sources()
 
-    order = [
-        "start",
-        "name_entered",
-        "birth_date_entered",
-        "city_entered",
-        "solar_generated",
-        "synastry_generated",
-        "payment_started",
-        "payment_success",
-    ]
-    lines = ["📊 Воронка (уникальные пользователи):\n"]
-    for key in order:
-        lines.append(f"{key}: {summary.get(key, 0)}")
+    def count(event: str) -> int:
+        return summary.get(event, 0)
+
+    def pct(part: int, total: int) -> str:
+        if total <= 0:
+            return "—"
+        return f"{part / total * 100:.0f}%"
+
+    def product_block(title: str, prefix: str) -> list[str]:
+        selected = count(f"{prefix}_selected")
+        payment_started = count(f"{prefix}_payment_started")
+        payment_success = count(f"{prefix}_payment_success")
+        generated = count(f"{prefix}_generated")
+        return [
+            f"\n{title}:",
+            f"выбрали: {selected}",
+            f"дошли до оплаты: {payment_started} ({pct(payment_started, selected)} от выбора)",
+            f"оплатили: {payment_success} ({pct(payment_success, payment_started)} от инвойса)",
+            f"получили файл: {generated} ({pct(generated, payment_success)} от оплат)",
+        ]
+
+    lines = ["📊 Воронка (уникальные пользователи):"]
+    lines.append(f"\nВсего стартов: {count('start')}")
+    lines.append(f"ввели имя: {count('name_entered')}")
+    lines.append(f"ввели дату рождения: {count('birth_date_entered')}")
+    lines.extend(product_block("🌞 Соляр", "solar"))
+    lines.extend(product_block("💞 Синастрия", "synastry"))
+
+    lines.append("\nОбщие платежи (включая старые события до разделения):")
+    lines.append(f"payment_started: {count('payment_started')}")
+    lines.append(f"payment_success: {count('payment_success')}")
 
     lines.append("\n📍 Источники (?start=...):")
     if sources:
