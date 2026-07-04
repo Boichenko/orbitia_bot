@@ -1,3 +1,4 @@
+import asyncio
 import os
 import re
 import time
@@ -681,12 +682,19 @@ async def process_confirm_go(callback: CallbackQuery, state: FSMContext):
         await callback.message.edit_text("Секунду, считаю короткий акцент по карте...")
     except Exception:
         pass
+    await asyncio.sleep(1.4)
 
     try:
         pre_payment_pitch = _build_pre_payment_pitch(data, report_type)
     except Exception as e:
         await callback.message.answer(f"Не удалось подготовить предрасчёт: {e}")
         return
+
+    try:
+        await callback.message.edit_text("Акцент найден. Перепроверяю формулировку...")
+    except Exception:
+        pass
+    await asyncio.sleep(0.8)
 
     await callback.message.answer(pre_payment_pitch)
 
@@ -819,8 +827,7 @@ def _build_solar_pre_payment_pitch(data: dict) -> str:
     if closest:
         aspect_text = (
             f" Самый точный акцент в аспектах: {_aspect_phrase(closest)} — "
-            "это добавляет году конкретный поворот и напряжение/ресурс, "
-            "который важно разобрать отдельно."
+            "это добавляет году сильную тему, которую стоит раскрыть в полном разборе."
         )
     if moon_house and moon_house != focus_house:
         aspect_text += (
@@ -907,10 +914,10 @@ async def process_successful_payment(message: Message, state: FSMContext):
     log_event(message.from_user.id, "payment_success")
     data = await state.get_data()
     if data.get("report_type") == "synastry":
-        await message.answer("Оплата получена ⭐ Считаю синастрию...")
+        await message.answer("Оплата получена ⭐ Готовлю полную расшифровку синастрии...")
         await _run_synastry_analysis(message, message.from_user, state)
     else:
-        await message.answer("Оплата получена ⭐ Считаю соляр...")
+        await message.answer("Оплата получена ⭐ Готовлю полную расшифровку соляра...")
         await _run_solar_analysis(message, message.from_user, state)
 
 
@@ -982,7 +989,8 @@ async def _run_solar_analysis(answer_target, from_user: User, state: FSMContext)
         )
 
     progress_msg = await answer_target.answer(
-        "⏳ Считаю карту соляра и готовлю разбор — это может занять пару минут..." + time_note
+        "⏳ Карта соляра уже построена. Готовлю полную расшифровку — это может занять пару минут..."
+        + time_note
     )
 
     birth_tz = get_timezone(birth_place["lat"], birth_place["lon"])
@@ -1030,7 +1038,9 @@ async def _run_solar_analysis(answer_target, from_user: User, state: FSMContext)
     # Второй проход: вычитка и сжатие до жёсткого лимита объёма + проверка
     # черновика на соответствие исходным данным карты.
     try:
-        await progress_msg.edit_text("✍️ Считаю, пишу черновик, дальше вычитываю..." + time_note)
+        await progress_msg.edit_text(
+            "✍️ Раскрываю акценты в полный разбор и проверяю текст..." + time_note
+        )
     except Exception:
         pass
 
@@ -1061,7 +1071,7 @@ async def _run_solar_analysis(answer_target, from_user: User, state: FSMContext)
     except Exception:
         await answer_target.answer(teaser)
 
-    file_status = await answer_target.answer("📄 Собираю файл с полным разбором...")
+    file_status = await answer_target.answer("📄 Формирую PDF-файл с полной расшифровкой...")
 
     output_path = f"/tmp/solar_{from_user.id}_{int(time.time())}.pdf"
     title = f"Соляр {data.get('person_name', '')}".strip()
@@ -1120,7 +1130,7 @@ async def _run_synastry_analysis(answer_target, from_user: User, state: FSMConte
         )
 
     progress_msg = await answer_target.answer(
-        "⏳ Считаю синастрию и готовлю разбор — это может занять пару минут..."
+        "⏳ Синастрия уже построена. Готовлю полную расшифровку — это может занять пару минут..."
         + first_time_note
         + partner_time_note
     )
@@ -1172,7 +1182,7 @@ async def _run_synastry_analysis(answer_target, from_user: User, state: FSMConte
         cut_off_note = "\n\n⚠️ Черновик получился длиннее лимита и обрезался."
 
     try:
-        await progress_msg.edit_text("✍️ Считаю, пишу черновик, дальше вычитываю...")
+        await progress_msg.edit_text("✍️ Раскрываю акценты пары в полный разбор и проверяю текст...")
     except Exception:
         pass
 
@@ -1203,7 +1213,7 @@ async def _run_synastry_analysis(answer_target, from_user: User, state: FSMConte
     except Exception:
         await answer_target.answer(teaser)
 
-    file_status = await answer_target.answer("📄 Собираю файл с полным разбором...")
+    file_status = await answer_target.answer("📄 Формирую PDF-файл с полной расшифровкой...")
 
     output_path = f"/tmp/synastry_{from_user.id}_{int(time.time())}.pdf"
     title = f"Синастрия {first_name} и {partner_name}".strip()
