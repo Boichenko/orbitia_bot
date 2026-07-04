@@ -47,6 +47,13 @@ NO_TIME_ANSWERS = {"не знаю", "не знаю точно", "незнаю", 
 SOLAR_STARS_PRICE = int(os.getenv("SOLAR_STARS_PRICE", "100"))
 SYNASTRY_STARS_PRICE = int(os.getenv("SYNASTRY_STARS_PRICE", "300"))
 PAYMENTS_ENABLED = os.getenv("PAYMENTS_ENABLED", "true").strip().lower() == "true"
+REPORT_TYPES = {"solar", "synastry"}
+
+
+def _log_report_event(user_id: int, data: dict, step: str) -> None:
+    report_type = data.get("report_type")
+    if report_type in REPORT_TYPES:
+        log_event(user_id, f"{report_type}_{step}")
 
 
 # ---------------------------------------------------------------------------
@@ -98,9 +105,9 @@ async def process_name(message: Message, state: FSMContext):
         await show_confirmation(message, state)
         return
 
-    log_event(message.from_user.id, "name_entered")
-
     data = await state.get_data()
+    log_event(message.from_user.id, "name_entered")
+    _log_report_event(message.from_user.id, data, "name_entered")
     if data.get("report_type") == "synastry":
         await message.answer(
             "Принято. Теперь укажи свою дату рождения в формате ДД.ММ.ГГГГ, например 14.03.1990"
@@ -141,6 +148,7 @@ async def process_birth_date(message: Message, state: FSMContext):
         return
 
     log_event(message.from_user.id, "birth_date_entered")
+    _log_report_event(message.from_user.id, data, "birth_date_entered")
 
     await message.answer(
         "Принято. Теперь укажи время рождения в формате ЧЧ:ММ (24-часовой формат).\n"
@@ -173,6 +181,8 @@ async def process_birth_time(message: Message, state: FSMContext):
         await state.update_data(return_to_confirmation=False)
         await show_confirmation(message, state)
         return
+
+    _log_report_event(message.from_user.id, data, "birth_time_entered")
 
     await message.answer("Хорошо. Теперь напиши город рождения.")
     await state.set_state(SolarStates.waiting_birth_place)
@@ -248,6 +258,8 @@ async def process_birth_place_choice(callback: CallbackQuery, state: FSMContext)
         await show_confirmation(callback.message, state)
         return
 
+    _log_report_event(callback.from_user.id, data, "birth_place_entered")
+
     if data.get("report_type") == "synastry":
         await _ask_partner_name(callback.message, state)
     else:
@@ -279,6 +291,8 @@ async def process_partner_name(message: Message, state: FSMContext):
         await show_confirmation(message, state)
         return
 
+    _log_report_event(message.from_user.id, data, "partner_name_entered")
+
     await message.answer(
         "Принято. Теперь укажи дату рождения партнёра в формате ДД.ММ.ГГГГ, например 14.03.1990"
     )
@@ -307,6 +321,8 @@ async def process_partner_birth_date(message: Message, state: FSMContext):
         await state.update_data(return_to_confirmation=False)
         await show_confirmation(message, state)
         return
+
+    _log_report_event(message.from_user.id, data, "partner_birth_date_entered")
 
     await message.answer(
         "Теперь укажи время рождения партнёра в формате ЧЧ:ММ (24-часовой формат).\n"
@@ -339,6 +355,8 @@ async def process_partner_birth_time(message: Message, state: FSMContext):
         await state.update_data(return_to_confirmation=False)
         await show_confirmation(message, state)
         return
+
+    _log_report_event(message.from_user.id, data, "partner_birth_time_entered")
 
     await message.answer("Хорошо. Теперь напиши город рождения партнёра.")
     await state.set_state(SolarStates.waiting_partner_birth_place)
@@ -378,6 +396,8 @@ async def process_partner_birth_place_choice(callback: CallbackQuery, state: FSM
         await show_confirmation(callback.message, state)
         return
 
+    _log_report_event(callback.from_user.id, data, "partner_birth_place_entered")
+
     await show_confirmation(callback.message, state)
 
 
@@ -414,6 +434,7 @@ async def process_solar_place_choice(callback: CallbackQuery, state: FSMContext)
         return
 
     log_event(callback.from_user.id, "city_entered")
+    _log_report_event(callback.from_user.id, data, "place_entered")
 
     await _ask_context(callback.message, state)
 
@@ -466,6 +487,8 @@ async def process_cycle_year(callback: CallbackQuery, state: FSMContext):
 
     year = int(value)
     await state.update_data(solar_cycle_year=year)
+    data = await state.get_data()
+    _log_report_event(callback.from_user.id, data, "cycle_year_entered")
     await callback.message.edit_text(f"Год расчёта: {year} → {year + 1}")
     await _after_cycle_year(callback.message, state)
 
@@ -479,6 +502,8 @@ async def process_cycle_year_custom(message: Message, state: FSMContext):
 
     year = int(text)
     await state.update_data(solar_cycle_year=year)
+    data = await state.get_data()
+    _log_report_event(message.from_user.id, data, "cycle_year_entered")
     await message.answer(f"Год расчёта: {year} → {year + 1}")
     await _after_cycle_year(message, state)
 
@@ -532,6 +557,8 @@ async def _ask_context(answer_target, state: FSMContext) -> None:
 @router.callback_query(SolarStates.waiting_context, F.data == "context:skip")
 async def process_context_skip(callback: CallbackQuery, state: FSMContext):
     await state.update_data(user_context=None)
+    data = await state.get_data()
+    _log_report_event(callback.from_user.id, data, "context_done")
     await callback.message.edit_text("Хорошо, без контекста.")
     await callback.answer()
     await show_confirmation(callback.message, state)
@@ -540,6 +567,8 @@ async def process_context_skip(callback: CallbackQuery, state: FSMContext):
 @router.message(SolarStates.waiting_context)
 async def process_context_text(message: Message, state: FSMContext):
     await state.update_data(user_context=(message.text or "").strip())
+    data = await state.get_data()
+    _log_report_event(message.from_user.id, data, "context_done")
     await message.answer("Записала контекст.")
     await show_confirmation(message, state)
 
@@ -554,6 +583,7 @@ async def show_confirmation(answer_target, state: FSMContext) -> None:
     if data.get("report_type") == "synastry":
         await show_synastry_confirmation(answer_target, state)
         return
+    _log_report_event(answer_target.chat.id, data, "confirmation_shown")
 
     birth_time = data.get("birth_time") or "неизвестно"
     cycle_year = data["solar_cycle_year"]
@@ -588,6 +618,7 @@ async def show_confirmation(answer_target, state: FSMContext) -> None:
 
 async def show_synastry_confirmation(answer_target, state: FSMContext) -> None:
     data = await state.get_data()
+    _log_report_event(answer_target.chat.id, data, "confirmation_shown")
     birth_time = data.get("birth_time") or "неизвестно"
     partner_birth_time = data.get("partner_birth_time") or "неизвестно"
 
@@ -951,27 +982,57 @@ async def cmd_stats(message: Message):
             return "—"
         return f"{part / total * 100:.0f}%"
 
-    def product_block(title: str, prefix: str) -> list[str]:
-        selected = count(f"{prefix}_selected")
-        payment_started = count(f"{prefix}_payment_started")
-        payment_success = count(f"{prefix}_payment_success")
-        generated = count(f"{prefix}_generated")
-        return [
-            f"\n{title}:",
-            f"выбрали: {selected}",
-            f"дошли до оплаты: {payment_started} ({pct(payment_started, selected)} от выбора)",
-            f"оплатили: {payment_success} ({pct(payment_success, payment_started)} от инвойса)",
-            f"получили файл: {generated} ({pct(generated, payment_success)} от оплат)",
-        ]
+    def funnel_block(title: str, steps: list[tuple[str, str]]) -> list[str]:
+        lines = [f"\n{title}:"]
+        previous_value: Optional[int] = None
+        for label, event in steps:
+            value = count(event)
+            if previous_value is None:
+                lines.append(f"{label}: {value}")
+            else:
+                lines.append(f"{label}: {value} ({pct(value, previous_value)} от прошлого шага)")
+            previous_value = value
+        return lines
+
+    solar_steps = [
+        ("выбрали соляр", "solar_selected"),
+        ("ввели имя", "solar_name_entered"),
+        ("ввели дату рождения", "solar_birth_date_entered"),
+        ("ввели время рождения", "solar_birth_time_entered"),
+        ("выбрали город рождения", "solar_birth_place_entered"),
+        ("выбрали год соляра", "solar_cycle_year_entered"),
+        ("выбрали место соляра", "solar_place_entered"),
+        ("добавили/пропустили контекст", "solar_context_done"),
+        ("увидели подтверждение", "solar_confirmation_shown"),
+        ("дошли до оплаты", "solar_payment_started"),
+        ("оплатили", "solar_payment_success"),
+        ("получили файл", "solar_generated"),
+    ]
+    synastry_steps = [
+        ("выбрали синастрию", "synastry_selected"),
+        ("ввели своё имя", "synastry_name_entered"),
+        ("ввели свою дату рождения", "synastry_birth_date_entered"),
+        ("ввели своё время рождения", "synastry_birth_time_entered"),
+        ("выбрали свой город рождения", "synastry_birth_place_entered"),
+        ("ввели имя партнёра", "synastry_partner_name_entered"),
+        ("ввели дату рождения партнёра", "synastry_partner_birth_date_entered"),
+        ("ввели время рождения партнёра", "synastry_partner_birth_time_entered"),
+        ("выбрали город рождения партнёра", "synastry_partner_birth_place_entered"),
+        ("увидели подтверждение", "synastry_confirmation_shown"),
+        ("дошли до оплаты", "synastry_payment_started"),
+        ("оплатили", "synastry_payment_success"),
+        ("получили файл", "synastry_generated"),
+    ]
 
     lines = ["📊 Воронка (уникальные пользователи):"]
-    lines.append(f"\nВсего стартов: {count('start')}")
-    lines.append(f"ввели имя: {count('name_entered')}")
-    lines.append(f"ввели дату рождения: {count('birth_date_entered')}")
-    lines.extend(product_block("🌞 Соляр", "solar"))
-    lines.extend(product_block("💞 Синастрия", "synastry"))
+    lines.append(f"\nОбщий старт: {count('start')}")
+    lines.extend(funnel_block("🌞 Соляр", solar_steps))
+    lines.extend(funnel_block("💞 Синастрия", synastry_steps))
 
-    lines.append("\nОбщие платежи (включая старые события до разделения):")
+    lines.append("\nСтарые общие события (до подробного разделения):")
+    lines.append(f"name_entered: {count('name_entered')}")
+    lines.append(f"birth_date_entered: {count('birth_date_entered')}")
+    lines.append(f"city_entered: {count('city_entered')}")
     lines.append(f"payment_started: {count('payment_started')}")
     lines.append(f"payment_success: {count('payment_success')}")
 
