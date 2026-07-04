@@ -1164,7 +1164,7 @@ async def _run_solar_analysis(answer_target, from_user: User, state: FSMContext)
         person_name=data.get("person_name", ""),
         cycle_year=cycle_year,
     )
-    markdown_to_pdf(title, buffer, output_path, visual_profile=visual_profile)
+    await markdown_to_pdf(title, buffer, output_path, visual_profile=visual_profile)
 
     name_part = re.sub(r'[\\/:*?"<>|]', "", data.get("person_name", "")).strip()
     display_name = f"{name_part} {data['birth_date']} {cycle_year}-{cycle_year + 1}".strip()
@@ -1311,7 +1311,7 @@ async def _run_synastry_analysis(answer_target, from_user: User, state: FSMConte
         first_name=first_name,
         partner_name=partner_name,
     )
-    markdown_to_pdf(title, buffer, output_path, visual_profile=visual_profile)
+    await markdown_to_pdf(title, buffer, output_path, visual_profile=visual_profile)
 
     safe_first = re.sub(r'[\\/:*?"<>|]', "", first_name).strip()
     safe_partner = re.sub(r'[\\/:*?"<>|]', "", partner_name).strip()

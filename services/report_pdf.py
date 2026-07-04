@@ -306,7 +306,302 @@ def _is_heading_line(line: str) -> bool:
     return any(title in stripped for title in _KNOWN_SECTION_TITLES)
 
 
-def markdown_to_pdf(
+def _markdown_to_html(markdown_text: str) -> str:
+    html_parts = []
+    in_list = False
+
+    def close_list() -> None:
+        nonlocal in_list
+        if in_list:
+            html_parts.append("</ul>")
+            in_list = False
+
+    for raw_line in markdown_text.split("\n"):
+        line = raw_line.rstrip()
+        if not line.strip():
+            close_list()
+            continue
+        if re.match(r"^-{3,}\s*$", line.strip()):
+            close_list()
+            continue
+
+        if _is_heading_line(line):
+            close_list()
+            clean = _strip_heading_decoration(line)
+            html_parts.append(f"<h2>{_md_inline_to_reportlab(clean)}</h2>")
+            continue
+
+        bullet_match = re.match(r"^[-*]\s+(.*)", line)
+        if bullet_match:
+            if not in_list:
+                html_parts.append("<ul>")
+                in_list = True
+            html_parts.append(f"<li>{_md_inline_to_reportlab(bullet_match.group(1))}</li>")
+            continue
+
+        numbered_match = re.match(r"^(\d+[\.\)])\s+(.*)", line)
+        if numbered_match:
+            close_list()
+            html_parts.append(
+                f"<p><b>{saxutils.escape(numbered_match.group(1))}</b> "
+                f"{_md_inline_to_reportlab(numbered_match.group(2))}</p>"
+            )
+            continue
+
+        close_list()
+        html_parts.append(f"<p>{_md_inline_to_reportlab(line)}</p>")
+
+    close_list()
+    return "\n".join(html_parts)
+
+
+def _profile_html(profile: dict | None) -> str:
+    if not profile:
+        return ""
+
+    meta = "\n".join(
+        f"<div class=\"meta-item\"><span>{saxutils.escape(label)}</span><b>{saxutils.escape(value)}</b></div>"
+        for label, value in profile.get("meta", [])
+    )
+    cards = "\n".join(
+        f"""
+        <article class="metric-card">
+          <div class="donut" style="--score:{card['score']}; --color:{card['color']}">
+            <strong>{card['score']}</strong><span>из 10</span>
+          </div>
+          <div>
+            <h3>{saxutils.escape(card['title'])}</h3>
+            <p>{saxutils.escape(card['note'])}</p>
+          </div>
+        </article>
+        """
+        for card in profile.get("cards", [])
+    )
+    focus_items = "\n".join(
+        f"<li>{saxutils.escape(item)}</li>" for item in profile.get("focus_items", [])[:4]
+    )
+
+    return f"""
+    <section class="visual-page">
+      <header class="hero">
+        <div class="stars"></div>
+        <div class="orb orb-a"></div>
+        <div class="orb orb-b"></div>
+        <div class="hero-content">
+          <div class="kicker">АСТРОЛОГИЧЕСКИЙ ОТЧЁТ</div>
+          <h1>{saxutils.escape(profile['hero_title'])}</h1>
+          <h2>{saxutils.escape(profile['hero_accent'])}</h2>
+          <p>{saxutils.escape(profile['hero_description'])}</p>
+          <div class="meta-row">{meta}</div>
+        </div>
+      </header>
+
+      <section class="summary-head">
+        <div>
+          <div class="eyebrow">{saxutils.escape(profile['eyebrow'])}</div>
+          <h2>{saxutils.escape(profile['section_title'])}</h2>
+          <p>{saxutils.escape(profile['subtitle'])}</p>
+        </div>
+        <div class="summary-stats">
+          <div><span>СРЕДНИЙ БАЛЛ</span><strong>{profile['average']}</strong></div>
+          <div><span>ТОП СФЕРА</span><strong>{saxutils.escape(profile['top_label'])}</strong></div>
+        </div>
+      </section>
+
+      <section class="metric-grid">{cards}</section>
+
+      <section class="focus-box">
+        <div class="eyebrow">ПРАКТИЧЕСКИЙ ФОКУС</div>
+        <h2>{saxutils.escape(profile['focus_title'])}</h2>
+        <ul>{focus_items}</ul>
+      </section>
+    </section>
+    """
+
+
+def _build_report_html(title: str, markdown_text: str, visual_profile: dict | None) -> str:
+    body = _markdown_to_html(markdown_text)
+    return f"""<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <style>
+    @page {{ size: A4; margin: 0; }}
+    * {{ box-sizing: border-box; }}
+    body {{
+      margin: 0;
+      background: #ffffff;
+      color: #202033;
+      font-family: DejaVu Sans, Arial, sans-serif;
+    }}
+    .visual-page {{
+      width: 210mm;
+      height: 297mm;
+      padding: 10mm 13mm;
+      background: #fbf5e8;
+      page-break-after: always;
+      overflow: hidden;
+    }}
+    .hero {{
+      position: relative;
+      height: 69mm;
+      border-radius: 7mm;
+      overflow: hidden;
+      background: #08061c;
+      color: white;
+      padding: 13mm 17mm;
+    }}
+    .hero-content {{ position: relative; z-index: 2; max-width: 145mm; }}
+    .kicker, .eyebrow, .meta-item span, .summary-stats span {{
+      color: #6b6d84;
+      font-size: 8px;
+      font-weight: 700;
+      letter-spacing: 5px;
+    }}
+    .kicker {{ color: #ffc66d; letter-spacing: 3px; margin-bottom: 7mm; }}
+    .hero h1 {{ margin: 0; font-size: 31px; line-height: 1.02; }}
+    .hero h2 {{ margin: 2mm 0 5mm; color: #ffc66d; font-size: 25px; line-height: 1.04; }}
+    .hero p {{ margin: 0; max-width: 122mm; color: #d9d4e2; font-size: 10.5px; line-height: 1.35; }}
+    .meta-row {{ display: flex; gap: 18mm; margin-top: 3mm; }}
+    .meta-item b {{ display: block; margin-top: 2mm; color: white; font-size: 10px; }}
+    .orb {{ position: absolute; border-radius: 50%; opacity: .95; }}
+    .orb-a {{ width: 48mm; height: 48mm; right: 20mm; top: 3mm; background: #2a123f; }}
+    .orb-b {{ width: 39mm; height: 39mm; right: 14mm; top: 30mm; background: #642538; }}
+    .stars {{
+      position: absolute; inset: 0;
+      background-image:
+        radial-gradient(circle at 12% 70%, #fff 0 1px, transparent 1.5px),
+        radial-gradient(circle at 33% 22%, #fff 0 1px, transparent 1.5px),
+        radial-gradient(circle at 53% 61%, #fff 0 1px, transparent 1.5px),
+        radial-gradient(circle at 84% 15%, #fff 0 1px, transparent 1.5px),
+        radial-gradient(circle at 72% 44%, #fff 0 1px, transparent 1.5px);
+    }}
+    .summary-head {{
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10mm;
+      align-items: start;
+      padding: 8mm 10mm 4mm;
+    }}
+    .summary-head h2 {{ margin: 3mm 0 3mm; font-size: 27px; line-height: 1.02; }}
+    .summary-head p {{ margin: 0; color: #606276; font-size: 11.5px; line-height: 1.25; }}
+    .summary-stats {{ display: flex; gap: 8mm; padding-top: 1mm; }}
+    .summary-stats strong {{ display: block; margin-top: 3mm; font-size: 16px; }}
+    .metric-grid {{
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 3.5mm;
+      padding: 0 10mm;
+    }}
+    .metric-card {{
+      display: grid;
+      grid-template-columns: 30mm 1fr;
+      gap: 4mm;
+      align-items: center;
+      min-height: 23mm;
+      padding: 3.2mm;
+      border: 1px solid #dfd7c8;
+      border-radius: 6mm;
+      background: #fffdf8;
+      box-shadow: 0 5px 0 #ded7c8;
+      overflow: hidden;
+    }}
+    .metric-card h3 {{ margin: 0 0 1.4mm; font-size: 13.5px; line-height: 1.05; }}
+    .metric-card p {{
+      margin: 0;
+      color: #5d6074;
+      font-size: 9.5px;
+      line-height: 1.28;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }}
+    .donut {{
+      width: 19mm;
+      height: 19mm;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background:
+        radial-gradient(circle, #fffdf8 0 49%, transparent 50%),
+        conic-gradient(var(--color) calc(var(--score) * 10%), #f0ede5 0);
+      color: var(--color);
+    }}
+    .donut strong {{ font-size: 17px; line-height: 1; }}
+    .donut span {{ margin-top: -7mm; color: #5d6074; font-size: 7px; }}
+    .focus-box {{
+      margin: 8mm 10mm 0;
+      padding: 7mm 10mm;
+      border: 1px solid #dfd7c8;
+      border-radius: 8mm;
+      background: #fffdf8;
+      box-shadow: 0 5px 0 #ded7c8;
+    }}
+    .focus-box h2 {{ margin: 3mm 0 5mm; font-size: 22px; line-height: 1.05; }}
+    .focus-box ul {{
+      margin: 0;
+      padding: 0;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 3.5mm 8mm;
+      list-style: none;
+    }}
+    .focus-box li {{
+      position: relative;
+      padding-left: 7mm;
+      font-size: 9.5px;
+      line-height: 1.25;
+    }}
+    .focus-box li::before {{
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 1.5mm;
+      width: 2mm;
+      height: 2mm;
+      border-radius: 50%;
+      background: #d5a600;
+    }}
+    .text-report {{
+      padding: 18mm 20mm;
+      font-size: 12px;
+      line-height: 1.55;
+    }}
+    .text-report h1 {{ margin: 0 0 10mm; font-size: 28px; }}
+    .text-report h2 {{ margin: 8mm 0 3mm; font-size: 18px; }}
+    .text-report p {{ margin: 0 0 3.5mm; }}
+    .text-report li {{ margin-bottom: 2mm; }}
+  </style>
+</head>
+<body>
+  {_profile_html(visual_profile)}
+  <main class="text-report">
+    <h1>{saxutils.escape(title)}</h1>
+    {body}
+  </main>
+</body>
+</html>"""
+
+
+async def _html_to_pdf(
+    title: str,
+    markdown_text: str,
+    output_path: str,
+    visual_profile: dict | None,
+) -> None:
+    from playwright.async_api import async_playwright
+
+    html = _build_report_html(title, markdown_text, visual_profile)
+    async with async_playwright() as p:
+        browser = await p.chromium.launch()
+        page = await browser.new_page()
+        await page.set_content(html, wait_until="networkidle")
+        await page.pdf(path=output_path, format="A4", print_background=True, prefer_css_page_size=True)
+        await browser.close()
+
+
+def _reportlab_markdown_to_pdf(
     title: str,
     markdown_text: str,
     output_path: str,
@@ -388,3 +683,15 @@ def markdown_to_pdf(
         story.append(Paragraph(_md_inline_to_reportlab(line), normal_style))
 
     doc.build(story)
+
+
+async def markdown_to_pdf(
+    title: str,
+    markdown_text: str,
+    output_path: str,
+    visual_profile: dict | None = None,
+) -> None:
+    try:
+        await _html_to_pdf(title, markdown_text, output_path, visual_profile)
+    except Exception:
+        _reportlab_markdown_to_pdf(title, markdown_text, output_path, visual_profile)
