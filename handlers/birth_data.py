@@ -677,6 +677,18 @@ async def process_confirm_go(callback: CallbackQuery, state: FSMContext):
         return
 
     log_event(callback.from_user.id, "payment_started")
+    try:
+        await callback.message.edit_text("Секунду, считаю короткий акцент по карте...")
+    except Exception:
+        pass
+
+    try:
+        pre_payment_pitch = _build_pre_payment_pitch(data, report_type)
+    except Exception as e:
+        await callback.message.answer(f"Не удалось подготовить предрасчёт: {e}")
+        return
+
+    await callback.message.answer(pre_payment_pitch)
 
     if report_type == "synastry":
         title = "Синастрия / совместимость"
@@ -696,6 +708,192 @@ async def process_confirm_go(callback: CallbackQuery, state: FSMContext):
         currency="XTR",
         prices=prices,
         provider_token="",
+    )
+
+
+HOUSE_ACCENTS = {
+    "1": "личность, внешний образ, самостоятельные решения и новый старт",
+    "2": "деньги, самоценность, ресурсы и ощущение опоры",
+    "3": "общение, обучение, документы, поездки и важные разговоры",
+    "4": "дом, семья, переезд, внутреннее состояние и личная база",
+    "5": "любовь, творчество, дети, удовольствие и желание проявляться",
+    "6": "работа, режим, здоровье, привычки и ежедневная нагрузка",
+    "7": "отношения, партнёрства, договорённости и важные союзы",
+    "8": "глубокие перемены, общие деньги, близость и психологическая честность",
+    "9": "расширение горизонтов, обучение, путешествия и новые смыслы",
+    "10": "карьера, статус, цели, признание и движение вверх",
+    "11": "друзья, команда, аудитория, планы на будущее и новые круги",
+    "12": "завершение старого, тишина, восстановление и скрытые процессы",
+}
+
+PERSONAL_PLANETS = {"Солнце", "Луна", "Меркурий", "Венера", "Марс"}
+
+
+def _build_pre_payment_pitch(data: dict, report_type: str) -> str:
+    if report_type == "synastry":
+        return _build_synastry_pre_payment_pitch(data)
+    return _build_solar_pre_payment_pitch(data)
+
+
+def _table_row(table: list[list[str]], name: str) -> Optional[list[str]]:
+    for row in table[1:]:
+        if row and row[0] == name:
+            return row
+    return None
+
+
+def _top_house_from_planets(planets_table: list[list[str]]) -> Optional[str]:
+    counts: dict[str, int] = {}
+    for row in planets_table[1:]:
+        if len(row) < 3:
+            continue
+        counts[row[2]] = counts.get(row[2], 0) + 1
+    if not counts:
+        return None
+    return max(counts, key=counts.get)
+
+
+def _closest_aspect(aspects_table: list[list[str]], personal_only: bool = False) -> Optional[list[str]]:
+    rows = []
+    for row in aspects_table[1:]:
+        if len(row) < 4:
+            continue
+        if personal_only and row[0] not in PERSONAL_PLANETS and row[2] not in PERSONAL_PLANETS:
+            continue
+        try:
+            orb = float(row[3])
+        except ValueError:
+            continue
+        rows.append((orb, row))
+    if not rows:
+        return None
+    return sorted(rows, key=lambda item: item[0])[0][1]
+
+
+def _aspect_phrase(row: list[str]) -> str:
+    return f"{row[0]} в аспекте «{row[1].lower()}» с {row[2].lower()} (орб {row[3]})"
+
+
+def _build_solar_pre_payment_pitch(data: dict) -> str:
+    birth_place = data["birth_place"]
+    solar_place = data["solar_place"]
+    cycle_year = data["solar_cycle_year"]
+    day, month, year = (int(x) for x in data["birth_date"].split("."))
+
+    birth_time = data.get("birth_time")
+    if birth_time:
+        hour, minute = (int(x) for x in birth_time.split(":"))
+    else:
+        hour, minute = 12, 0
+
+    birth_tz = get_timezone(birth_place["lat"], birth_place["lon"])
+    solar_tz = get_timezone(solar_place["lat"], solar_place["lon"])
+    chart_data = compute_solar_return(
+        birth_year=year,
+        birth_month=month,
+        birth_day=day,
+        birth_hour=hour,
+        birth_minute=minute,
+        birth_tz=birth_tz,
+        birth_lat=birth_place["lat"],
+        birth_lon=birth_place["lon"],
+        birth_place_label=birth_place["label"],
+        solar_lat=solar_place["lat"],
+        solar_lon=solar_place["lon"],
+        solar_place_label=solar_place["label"],
+        solar_tz=solar_tz,
+        solar_cycle_year=cycle_year,
+    )
+
+    name = data.get("person_name") or "тебя"
+    planets = chart_data.get("planets") or []
+    sun_row = _table_row(planets, "Солнце")
+    moon_row = _table_row(planets, "Луна")
+    sun_house = sun_row[2] if sun_row and len(sun_row) > 2 else None
+    moon_house = moon_row[2] if moon_row and len(moon_row) > 2 else None
+    top_house = _top_house_from_planets(planets)
+    focus_house = sun_house or top_house or moon_house
+    focus = HOUSE_ACCENTS.get(focus_house or "", "главные события, выборы и внутренние перемены")
+    closest = _closest_aspect(chart_data.get("aspects") or [])
+    aspect_text = ""
+    if closest:
+        aspect_text = (
+            f" Самый точный акцент в аспектах: {_aspect_phrase(closest)} — "
+            "это добавляет году конкретный поворот и напряжение/ресурс, "
+            "который важно разобрать отдельно."
+        )
+    if moon_house and moon_house != focus_house:
+        aspect_text += (
+            f" Луна дополнительно подсвечивает {HOUSE_ACCENTS.get(moon_house, moon_house + ' дом')}."
+        )
+
+    return (
+        f"🌞 Мы уже рассчитали соляр для {name} на {cycle_year}–{cycle_year + 1}.\n\n"
+        "Год выглядит насыщенным и полным событий: карта показывает, что основной акцент "
+        f"пойдёт через {focus}. Это не общий гороскоп — расчёт уже построен по твоей дате, "
+        f"времени и месту соляра.{aspect_text}\n\n"
+        f"Полная расшифровка покажет главную тему года, точки роста, зоны напряжения и "
+        f"практичный фокус по сферам жизни. Стоимость полного разбора — {SOLAR_STARS_PRICE} ⭐."
+    )
+
+
+def _build_synastry_pre_payment_pitch(data: dict) -> str:
+    birth_place = data["birth_place"]
+    partner_birth_place = data["partner_birth_place"]
+    day, month, year = (int(x) for x in data["birth_date"].split("."))
+    p_day, p_month, p_year = (int(x) for x in data["partner_birth_date"].split("."))
+
+    birth_time = data.get("birth_time")
+    if birth_time:
+        hour, minute = (int(x) for x in birth_time.split(":"))
+    else:
+        hour, minute = 12, 0
+
+    partner_birth_time = data.get("partner_birth_time")
+    if partner_birth_time:
+        p_hour, p_minute = (int(x) for x in partner_birth_time.split(":"))
+    else:
+        p_hour, p_minute = 12, 0
+
+    chart_data = compute_synastry(
+        first_name=data.get("person_name", ""),
+        first_year=year,
+        first_month=month,
+        first_day=day,
+        first_hour=hour,
+        first_minute=minute,
+        first_tz=get_timezone(birth_place["lat"], birth_place["lon"]),
+        first_lat=birth_place["lat"],
+        first_lon=birth_place["lon"],
+        first_place_label=birth_place["label"],
+        partner_name=data.get("partner_name", ""),
+        partner_year=p_year,
+        partner_month=p_month,
+        partner_day=p_day,
+        partner_hour=p_hour,
+        partner_minute=p_minute,
+        partner_tz=get_timezone(partner_birth_place["lat"], partner_birth_place["lon"]),
+        partner_lat=partner_birth_place["lat"],
+        partner_lon=partner_birth_place["lon"],
+        partner_place_label=partner_birth_place["label"],
+    )
+
+    first_name = data.get("person_name") or "ты"
+    partner_name = data.get("partner_name") or "партнёр"
+    closest = _closest_aspect(chart_data.get("aspects") or [], personal_only=True)
+    aspect_text = ""
+    if closest:
+        aspect_text = (
+            f" Уже видно один из главных крючков связи: {_aspect_phrase(closest)}."
+        )
+
+    return (
+        f"💞 Мы уже рассчитали синастрию для пары {first_name} + {partner_name}.\n\n"
+        "Связь выглядит неслучайной: в карте есть точки притяжения, эмоционального отклика "
+        f"и зоны, где вы можете сильно включать друг друга.{aspect_text} Это как раз тот случай, "
+        "где важно смотреть не только “подходим/не подходим”, а как именно работает динамика пары.\n\n"
+        "Полная расшифровка покажет химию, эмоциональную совместимость, риски, ресурсы и то, "
+        f"как вы влияете друг на друга. Стоимость полного разбора — {SYNASTRY_STARS_PRICE} ⭐."
     )
 
 
