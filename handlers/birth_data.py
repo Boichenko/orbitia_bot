@@ -47,7 +47,7 @@ NO_TIME_ANSWERS = {"не знаю", "не знаю точно", "незнаю", 
 
 SOLAR_STARS_PRICE = int(os.getenv("SOLAR_STARS_PRICE", "100"))
 SYNASTRY_STARS_PRICE = int(os.getenv("SYNASTRY_STARS_PRICE", "300"))
-PAYMENTS_ENABLED = os.getenv("PAYMENTS_ENABLED", "true").strip().lower() == "true"
+PAYMENTS_ENABLED = os.getenv("PAYMENTS_ENABLED", "false").strip().lower() == "true"
 REPORT_TYPES = {"solar", "synastry"}
 
 
