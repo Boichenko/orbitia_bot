@@ -24,14 +24,15 @@ from services.analytics import funnel_summary, list_sources, log_event
 from services.claude_client import interpret_solar_chart
 from services.geocoding import search_city
 from services.prompt_builder import (
-    build_review_prompt,
+    build_solar_json_prompt,
     build_solar_prompt,
     build_synastry_prompt,
     build_synastry_review_prompt,
 )
 from services.report_file import extract_main_theme
+from services.report_json import parse_report_json, structured_report_to_teaser
 from services.report_insights import build_solar_profile, build_synastry_profile
-from services.report_pdf import markdown_to_pdf
+from services.report_pdf import markdown_to_pdf, structured_solar_to_pdf
 from services.solar_chart import compute_solar_return
 from services.synastry_chart import compute_synastry
 from services.timezone_lookup import get_timezone
@@ -1044,12 +1045,13 @@ async def _run_solar_analysis(answer_target, from_user: User, state: FSMContext)
         await state.clear()
         return
 
-    prompt = build_solar_prompt(
+    prompt = build_solar_json_prompt(
         chart_data,
         person_name=data.get("person_name", ""),
         user_context=user_context,
     )
 
+    report_json = None
     try:
         buffer, stop_reason = await interpret_solar_chart(prompt)
     except Exception as e:
@@ -1057,40 +1059,42 @@ async def _run_solar_analysis(answer_target, from_user: User, state: FSMContext)
         await state.clear()
         return
 
-    cut_off_note = ""
-    if stop_reason == "max_tokens":
-        cut_off_note = "\n\n⚠️ Черновик получился длиннее лимита и обрезался."
-
-    # Второй проход: вычитка и сжатие до жёсткого лимита объёма + проверка
-    # черновика на соответствие исходным данным карты.
     try:
-        await progress_msg.edit_text(
-            "✍️ Раскрываю акценты в полный разбор и проверяю текст..." + time_note
+        report_json = parse_report_json(buffer)
+    except Exception:
+        # Аварийный путь: если Claude вернул невалидный JSON, не ломаем выдачу
+        # пользователю, а собираем старый текстовый PDF.
+        fallback_prompt = build_solar_prompt(
+            chart_data,
+            person_name=data.get("person_name", ""),
+            user_context=user_context,
         )
-    except Exception:
-        pass
-
-    review_prompt = build_review_prompt(
-        buffer,
-        chart_data,
-        person_name=data.get("person_name", ""),
-        user_context=user_context,
-    )
-    try:
-        reviewed, review_stop_reason = await interpret_solar_chart(review_prompt)
-        if reviewed.strip():
-            buffer = reviewed
-            cut_off_note = (
-                "\n\n⚠️ Ответ получился длиннее лимита и обрезался даже после сокращения."
-                if review_stop_reason == "max_tokens"
-                else ""
+        try:
+            await progress_msg.edit_text(
+                "✍️ Собираю текстовую версию разбора, визуальный шаблон не принял данные..."
+                + time_note
             )
-    except Exception:
-        pass  # если вычитка не удалась — используем черновик как есть
+        except Exception:
+            pass
+        try:
+            buffer, stop_reason = await interpret_solar_chart(fallback_prompt)
+        except Exception as e:
+            await progress_msg.edit_text(f"Не удалось собрать отчёт: {e}")
+            await state.clear()
+            return
 
-    teaser = extract_main_theme(buffer)
-    if not teaser.strip():
-        teaser = "Разбор готов — основной текст смотри в приложенном файле ниже."
+    cut_off_note = (
+        "\n\n⚠️ Ответ получился длиннее лимита и мог быть обрезан."
+        if stop_reason == "max_tokens"
+        else ""
+    )
+
+    if report_json:
+        teaser = structured_report_to_teaser(report_json)
+    else:
+        teaser = extract_main_theme(buffer)
+        if not teaser.strip():
+            teaser = "Разбор готов — основной текст смотри в приложенном файле ниже."
     teaser += cut_off_note
     try:
         await progress_msg.edit_text(teaser)
@@ -1101,12 +1105,15 @@ async def _run_solar_analysis(answer_target, from_user: User, state: FSMContext)
 
     output_path = f"/tmp/solar_{from_user.id}_{int(time.time())}.pdf"
     title = f"Соляр {data.get('person_name', '')}".strip()
-    visual_profile = build_solar_profile(
-        chart_data,
-        person_name=data.get("person_name", ""),
-        cycle_year=cycle_year,
-    )
-    await markdown_to_pdf(title, buffer, output_path, visual_profile=visual_profile)
+    if report_json:
+        await structured_solar_to_pdf(report_json, output_path)
+    else:
+        visual_profile = build_solar_profile(
+            chart_data,
+            person_name=data.get("person_name", ""),
+            cycle_year=cycle_year,
+        )
+        await markdown_to_pdf(title, buffer, output_path, visual_profile=visual_profile)
 
     name_part = re.sub(r'[\\/:*?"<>|]', "", data.get("person_name", "")).strip()
     display_name = f"{name_part} {data['birth_date']} {cycle_year}-{cycle_year + 1}".strip()

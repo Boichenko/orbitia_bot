@@ -422,7 +422,7 @@ def _asset_data_uri(path: str) -> str:
 
 
 def _radar_svg(cards: list[dict]) -> str:
-    items = cards[:6]
+    items = cards[:7]
     if len(items) < 3:
         return ""
 
@@ -430,6 +430,7 @@ def _radar_svg(cards: list[dict]) -> str:
     max_radius = 104
     points = []
     labels = []
+    dots = []
     spokes = []
     for index, card in enumerate(items):
         angle = -math.pi / 2 + (2 * math.pi * index / len(items))
@@ -441,10 +442,11 @@ def _radar_svg(cards: list[dict]) -> str:
         sx = center + math.cos(angle) * max_radius
         sy = center + math.sin(angle) * max_radius
         points.append(f"{x:.1f},{y:.1f}")
+        dots.append(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="4" />')
         spokes.append(f'<line x1="{center}" y1="{center}" x2="{sx:.1f}" y2="{sy:.1f}" />')
         labels.append(
             f'<text x="{lx:.1f}" y="{ly:.1f}" text-anchor="middle">'
-            f"{saxutils.escape(str(card.get('title', '')))[:18]}</text>"
+            f"{saxutils.escape(str(card.get('title', '')))[:13]}</text>"
         )
 
     rings = []
@@ -463,6 +465,7 @@ def _radar_svg(cards: list[dict]) -> str:
       <g class="radar-grid">{"".join(rings)}{"".join(spokes)}</g>
       <polygon class="radar-area" points="{" ".join(points)}" />
       <polyline class="radar-line" points="{" ".join(points)} {points[0]}" />
+      <g class="radar-dots">{"".join(dots)}</g>
       <g class="radar-labels">{"".join(labels)}</g>
     </svg>
     """
@@ -1418,21 +1421,371 @@ def _build_report_html(title: str, markdown_text: str, visual_profile: dict | No
 </html>"""
 
 
-async def _html_to_pdf(
-    title: str,
-    markdown_text: str,
-    output_path: str,
-    visual_profile: dict | None,
-) -> None:
+def _safe_text(value, fallback: str = "") -> str:
+    return saxutils.escape(str(value if value is not None else fallback))
+
+
+def _safe_score(value, fallback: int = 5) -> int:
+    try:
+        score = int(round(float(value)))
+    except (TypeError, ValueError):
+        score = fallback
+    return max(1, min(10, score))
+
+
+def _structured_items(items, limit: int = 4) -> str:
+    if not isinstance(items, list):
+        return ""
+    return "".join(f"<li>{_safe_text(item)}</li>" for item in items[:limit])
+
+
+def _category_by_key(report: dict, key: str) -> dict:
+    for category in report.get("categories") or []:
+        if category.get("key") == key:
+            return category
+    return {"key": key, "title": key, "score": 5}
+
+
+def _sphere_cards_for_radar(report: dict) -> list[dict]:
+    default_titles = {
+        "career": "Карьера",
+        "money": "Деньги",
+        "relationships": "Отношения",
+        "home": "Дом",
+        "health": "Здоровье",
+        "communication": "Общение",
+        "inner": "Внутреннее",
+    }
+    colors = ["#D6B56D", "#7A5CFF", "#D6B56D", "#7A5CFF", "#D6B56D", "#7A5CFF", "#D6B56D"]
+    cards = []
+    for index, item in enumerate(report.get("sphere_map") or []):
+        key = item.get("key") or f"sphere_{index}"
+        cards.append(
+            {
+                "title": item.get("title") or default_titles.get(key, key),
+                "score": _safe_score(item.get("score")),
+                "color": colors[index % len(colors)],
+                "note": item.get("meaning") or "",
+            }
+        )
+    if cards:
+        return cards[:7]
+    for index, (key, title) in enumerate(default_titles.items()):
+        category = _category_by_key(report, key)
+        cards.append(
+            {
+                "title": title,
+                "score": _safe_score(category.get("score")),
+                "color": colors[index % len(colors)],
+                "note": category.get("summary") or "",
+            }
+        )
+    return cards
+
+
+def _category_text_block(category: dict) -> str:
+    return f"""
+    <div class="category-copy">
+      <p class="category-summary">{_safe_text(category.get("summary"))}</p>
+      <div class="category-columns">
+        <div><h4>Что усиливается</h4><ul>{_structured_items(category.get("amplified"))}</ul></div>
+        <div><h4>Возможные проявления</h4><ul>{_structured_items(category.get("manifestations"))}</ul></div>
+        <div><h4>Риски</h4><ul>{_structured_items(category.get("risks"), 3)}</ul></div>
+        <div><h4>Что делать</h4><ul>{_structured_items(category.get("actions"))}</ul></div>
+        <div><h4>Основание</h4><ul>{_structured_items(category.get("astro_basis"))}</ul></div>
+      </div>
+    </div>
+    """
+
+
+def _growth_ladder(category: dict) -> str:
+    score = _safe_score(category.get("score"))
+    active = 3 if score >= 8 else 2 if score >= 5 else 1
+    steps = [("Экспертность", 1), ("Видимость", 2), ("Статус", 3)]
+    return f"""
+    <div class="visual ladder">
+      <div class="visual-score">{score}/10</div>
+      <div class="ladder-steps">
+        {"".join(f'<div class="ladder-step {"active" if level == active else ""}" style="--w:{56 + level * 16}%">{label}</div>' for label, level in steps)}
+      </div>
+    </div>
+    """
+
+
+def _resource_circle(category: dict) -> str:
+    score = _safe_score(category.get("score"))
+    values = [score, max(1, score - 1), min(10, score + 1), max(1, score - 2)]
+    labels = ["Доход", "Ценность", "Контроль", "Накопление"]
+    return f"""
+    <div class="visual resource-circle">
+      <div class="resource-center">Финансовый<br>фокус года</div>
+      {"".join(f'<div class="resource-segment seg-{i}" style="--level:{value * 10}%"><span>{label}</span></div>' for i, (label, value) in enumerate(zip(labels, values), 1))}
+    </div>
+    """
+
+
+def _relationship_axis(category: dict) -> str:
+    score = _safe_score(category.get("score"))
+    position = max(18, min(82, 35 + score * 4))
+    return f"""
+    <div class="visual relationship-axis">
+      <div class="axis-labels"><span>Близость</span><span>Свобода</span></div>
+      <div class="axis-line"><span style="left:{position}%"></span></div>
+      <p>{_safe_text(category.get("summary"), "Баланс близости и свободы становится ключевой темой.")}</p>
+    </div>
+    """
+
+
+def _foundation(category: dict) -> str:
+    return """
+    <div class="visual foundation">
+      <div class="foundation-row"><span>Быт</span><span>Семья</span><span>Пространство</span></div>
+      <div class="foundation-base">Безопасность</div>
+    </div>
+    """
+
+
+def _battery(category: dict) -> str:
+    score = _safe_score(category.get("score"))
+    fill = max(15, min(95, score * 10))
+    return f"""
+    <div class="visual battery-wrap">
+      <div class="battery"><div style="width:{fill}%"></div><span></span></div>
+      <div class="battery-zones"><span>Восстановление</span><span>Рабочий ресурс</span><span>Перегруз</span></div>
+      <p>Главная задача — не расходовать ресурс быстрее, чем он восстанавливается.</p>
+    </div>
+    """
+
+
+def _communication_bars(category: dict) -> str:
+    score = _safe_score(category.get("score"))
+    rows = [
+        ("Обучение", min(10, score + 1)),
+        ("Тексты", score),
+        ("Встречи", max(1, score - 1)),
+        ("Поездки", max(1, score - 2)),
+    ]
+
+    def label(value: int) -> str:
+        return "сильно" if value >= 8 else "средне" if value >= 5 else "спокойно"
+
+    return f"""
+    <div class="visual channel-bars">
+      {"".join(f'<div class="channel-row"><b>{name}</b><span><i style="width:{value * 10}%"></i></span><em>{label(value)}</em></div>' for name, value in rows)}
+    </div>
+    """
+
+
+def _inner_core(category: dict) -> str:
+    return """
+    <div class="visual inner-core">
+      <span class="core-label top">Тишина</span>
+      <span class="core-label left">Смысл</span>
+      <span class="core-label right">Восстановление</span>
+      <div>Ядро</div>
+    </div>
+    """
+
+
+def _category_visual(key: str, category: dict) -> str:
+    return {
+        "career": _growth_ladder,
+        "money": _resource_circle,
+        "relationships": _relationship_axis,
+        "home": _foundation,
+        "health": _battery,
+        "communication": _communication_bars,
+        "inner": _inner_core,
+    }.get(key, _growth_ladder)(category)
+
+
+def _structured_category_page(key: str, report: dict) -> str:
+    category = _category_by_key(report, key)
+    score = _safe_score(category.get("score"))
+    return f"""
+    <section class="structured-page category-page">
+      <div class="section-mark">Категория</div>
+      <header class="category-header">
+        <h2>{_safe_text(category.get("title"))}</h2>
+        <strong>{score}/10</strong>
+      </header>
+      <div class="category-layout">
+        {_category_visual(key, category)}
+        {_category_text_block(category)}
+      </div>
+    </section>
+    """
+
+
+def _structured_solar_html(report: dict) -> str:
+    cover = report.get("cover") or {}
+    theme = report.get("main_theme") or {}
+    cards = _sphere_cards_for_radar(report)
+    score_rows = "\n".join(
+        f"<div class=\"score-row\"><span>{_safe_text(card['title'])}</span><b>{_safe_score(card['score'])}</b></div>"
+        for card in cards
+    )
+    accents = "".join(f"<span>{_safe_text(item)}</span>" for item in (theme.get("accents") or [])[:3])
+    category_pages = "\n".join(
+        _structured_category_page(key, report)
+        for key in ["career", "money", "relationships", "home", "health", "communication", "inner"]
+    )
+    risk_rows = "\n".join(
+        f"""
+        <div class="risk-heat-row" style="--level:{_safe_score(item.get('level')) * 10}%">
+          <b>{_safe_text(item.get('title'))}</b>
+          <span>{_safe_text(item.get('risk'))}</span>
+          <em>{_safe_text(item.get('support'))}</em>
+        </div>
+        """
+        for item in (report.get("risk_summary") or [])[:4]
+    )
+    opportunity_cards = "\n".join(
+        f"<article><i></i><h3>{_safe_text(item.get('title'))}</h3><p>{_safe_text(item.get('text'))}</p></article>"
+        for item in (report.get("opportunities") or [])[:4]
+    )
+    plan_steps = "\n".join(
+        f"<div class=\"plan-step\"><b>{_safe_text(item.get('step'))}</b><span>{_safe_text(item.get('action'))}</span></div>"
+        for item in (report.get("plan") or [])[:5]
+    )
+
+    return f"""<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <style>
+    @page {{ size: A4; margin: 0; }}
+    * {{ box-sizing: border-box; }}
+    body {{ margin:0; background:#171225; color:#f5efdf; font-family: Manrope, DejaVu Sans, Arial, sans-serif; }}
+    h1,h2,h3 {{ font-family: Cormorant Garamond, Georgia, serif; letter-spacing:0; }}
+    .structured-page {{ width:210mm; height:297mm; padding:18mm; page-break-after:always; overflow:hidden; background:radial-gradient(circle at 82% 16%, rgba(122,92,255,.23), transparent 35%), #171225; }}
+    .cover-hero {{ height:100%; border:1px solid rgba(214,181,109,.55); border-radius:8mm; padding:22mm; display:flex; flex-direction:column; justify-content:center; }}
+    .cover-hero .kicker,.section-mark {{ color:#D6B56D; font-size:9px; font-weight:800; letter-spacing:4px; text-transform:uppercase; }}
+    .cover-hero h1 {{ margin:9mm 0 3mm; font-size:54px; line-height:1; }}
+    .cover-hero p {{ max-width:118mm; color:rgba(245,239,223,.72); font-size:15px; line-height:1.55; }}
+    .cover-metrics {{ display:grid; grid-template-columns:repeat(4,1fr); gap:4mm; margin-top:22mm; }}
+    .cover-metrics div {{ border-top:1px solid rgba(214,181,109,.35); padding-top:4mm; }}
+    .cover-metrics span {{ display:block; color:rgba(245,239,223,.45); font-size:9px; letter-spacing:2px; text-transform:uppercase; }}
+    .cover-metrics b {{ display:block; margin-top:2mm; color:#f5efdf; font-size:13px; line-height:1.25; }}
+    .sphere-grid-page h2,.theme-card h2,.category-header h2,.summary-page h2 {{ margin:0; font-size:37px; line-height:1.05; }}
+    .sphere-layout {{ display:grid; grid-template-columns:112mm 1fr; gap:12mm; align-items:center; margin-top:18mm; }}
+    .radar-panel {{ min-height:125mm; border:1px solid rgba(214,181,109,.22); border-radius:8mm; display:grid; place-items:center; background:rgba(255,255,255,.035); }}
+    .radar-svg {{ width:95mm; height:95mm; overflow:visible; }}
+    .radar-grid polygon,.radar-grid line {{ fill:none; stroke:rgba(214,181,109,.24); stroke-width:1; }}
+    .radar-area {{ fill:rgba(122,92,255,.30); }}
+    .radar-line {{ fill:none; stroke:#D6B56D; stroke-width:3; }}
+    .radar-dots circle {{ fill:#D6B56D; stroke:#171225; stroke-width:2; }}
+    .radar-labels text {{ fill:#f5efdf; font-size:8.5px; font-weight:700; }}
+    .score-list {{ display:grid; gap:3mm; }}
+    .score-row {{ display:flex; justify-content:space-between; gap:4mm; border-bottom:1px solid rgba(214,181,109,.15); padding:3.5mm 0; color:rgba(245,239,223,.82); }}
+    .score-row b {{ color:#D6B56D; }}
+    .theme-card {{ margin-top:28mm; border-left:2mm solid #D6B56D; padding:12mm 14mm; background:rgba(255,255,255,.04); border-radius:0 7mm 7mm 0; }}
+    .theme-card p {{ max-width:150mm; color:rgba(245,239,223,.78); font-size:14px; line-height:1.55; }}
+    .theme-pills {{ display:flex; gap:3mm; margin-top:8mm; }}
+    .theme-pills span {{ border:1px solid rgba(214,181,109,.3); border-radius:999px; padding:2.2mm 4mm; color:#D6B56D; font-size:10px; }}
+    .category-header {{ display:flex; justify-content:space-between; align-items:start; gap:10mm; margin-top:8mm; }}
+    .category-header strong {{ color:#D6B56D; font-size:28px; }}
+    .category-layout {{ display:grid; grid-template-columns:78mm 1fr; gap:10mm; margin-top:12mm; align-items:start; }}
+    .visual {{ min-height:78mm; border:1px solid rgba(214,181,109,.18); border-radius:7mm; background:rgba(255,255,255,.04); padding:8mm; }}
+    .visual-score {{ color:#D6B56D; font-size:27px; font-weight:800; margin-bottom:7mm; }}
+    .ladder-steps {{ display:flex; flex-direction:column-reverse; gap:4mm; align-items:flex-start; }}
+    .ladder-step {{ width:var(--w); padding:4mm; border-radius:3mm; background:rgba(122,92,255,.18); border:1px solid rgba(122,92,255,.36); }}
+    .ladder-step.active {{ background:rgba(214,181,109,.24); border-color:#D6B56D; color:#D6B56D; }}
+    .resource-circle {{ position:relative; display:grid; place-items:center; border-radius:50%; aspect-ratio:1; min-height:auto; background:conic-gradient(from -90deg, rgba(214,181,109,.70) 0 82deg, rgba(122,92,255,.34) 82deg 172deg, rgba(214,181,109,.42) 172deg 262deg, rgba(122,92,255,.22) 262deg 360deg); }}
+    .resource-circle:before {{ content:""; position:absolute; inset:13mm; border-radius:50%; background:#171225; border:1px solid rgba(214,181,109,.35); }}
+    .resource-center {{ width:34mm; height:34mm; border-radius:50%; display:grid; place-items:center; text-align:center; color:#D6B56D; font-size:10px; z-index:2; }}
+    .resource-segment {{ position:absolute; z-index:3; color:#f5efdf; font-size:8.5px; font-weight:800; }}
+    .resource-segment span {{ padding:1mm 1.8mm; border-radius:99px; background:rgba(23,18,37,.72); }}
+    .seg-1 {{ top:7mm; right:14mm; }} .seg-2 {{ bottom:18mm; right:5mm; }} .seg-3 {{ bottom:7mm; left:13mm; }} .seg-4 {{ top:18mm; left:4mm; }}
+    .axis-labels,.battery-zones {{ display:flex; justify-content:space-between; color:rgba(245,239,223,.62); font-size:10px; }}
+    .axis-line {{ height:1.8mm; background:rgba(214,181,109,.25); border-radius:99px; margin:12mm 0; position:relative; }}
+    .axis-line span {{ position:absolute; top:50%; width:7mm; height:7mm; border-radius:50%; background:#D6B56D; transform:translate(-50%,-50%); box-shadow:0 0 18px rgba(214,181,109,.45); }}
+    .relationship-axis p,.battery-wrap p {{ color:rgba(245,239,223,.72); font-size:11px; line-height:1.45; }}
+    .foundation {{ display:flex; flex-direction:column; justify-content:end; gap:4mm; }}
+    .foundation-row {{ display:grid; grid-template-columns:repeat(3,1fr); gap:3mm; }}
+    .foundation-row span,.foundation-base {{ padding:5mm 3mm; text-align:center; border:1px solid rgba(214,181,109,.25); background:rgba(122,92,255,.16); border-radius:3mm; }}
+    .foundation-base {{ background:rgba(214,181,109,.18); color:#D6B56D; font-weight:800; }}
+    .battery {{ height:26mm; border:2px solid rgba(214,181,109,.5); border-radius:4mm; padding:2mm; position:relative; margin:9mm 0 5mm; }}
+    .battery div {{ height:100%; border-radius:2mm; background:linear-gradient(90deg, rgba(122,92,255,.75), rgba(214,181,109,.85)); }}
+    .battery span {{ position:absolute; right:-5mm; top:8mm; width:4mm; height:10mm; border-radius:0 2mm 2mm 0; background:rgba(214,181,109,.5); }}
+    .channel-bars {{ display:grid; gap:5mm; }}
+    .channel-row {{ display:grid; grid-template-columns:23mm 1fr 17mm; gap:3mm; align-items:center; font-size:10px; }}
+    .channel-row span {{ height:3mm; border-radius:99px; background:rgba(255,255,255,.08); overflow:hidden; }}
+    .channel-row i {{ display:block; height:100%; background:#D6B56D; border-radius:99px; }}
+    .channel-row em {{ color:#D6B56D; font-style:normal; }}
+    .inner-core {{ position:relative; display:grid; place-items:center; }}
+    .inner-core div {{ width:38mm; height:38mm; border-radius:50%; display:grid; place-items:center; background:rgba(122,92,255,.28); border:1px solid #D6B56D; color:#D6B56D; font-weight:800; }}
+    .core-label {{ position:absolute; color:rgba(245,239,223,.72); font-size:11px; }} .core-label.top {{ top:10mm; }} .core-label.left {{ left:8mm; bottom:20mm; }} .core-label.right {{ right:5mm; bottom:20mm; }}
+    .category-summary {{ color:#D6B56D; font-size:14px; line-height:1.45; margin:0 0 6mm; }}
+    .category-columns {{ display:grid; grid-template-columns:1fr 1fr; gap:5mm; }}
+    .category-columns div {{ break-inside:avoid; }}
+    .category-columns h4 {{ margin:0 0 2mm; color:#f5efdf; font-size:11px; text-transform:uppercase; letter-spacing:1.5px; }}
+    .category-columns ul {{ margin:0; padding-left:4mm; color:rgba(245,239,223,.72); font-size:10.5px; line-height:1.35; }}
+    .summary-grid {{ display:grid; grid-template-columns:1fr 1fr; gap:6mm; margin-top:10mm; }}
+    .risk-heat-row,.opportunity-grid article,.plan-step {{ border:1px solid rgba(214,181,109,.16); border-radius:5mm; background:rgba(255,255,255,.04); padding:5mm; }}
+    .risk-heat-row {{ background:linear-gradient(90deg, rgba(122,92,255,.28), rgba(255,255,255,.035) var(--level)); min-height:34mm; }}
+    .risk-heat-row b,.opportunity-grid h3 {{ display:block; color:#D6B56D; margin-bottom:2mm; }}
+    .risk-heat-row span,.risk-heat-row em,.opportunity-grid p,.plan-step span {{ display:block; color:rgba(245,239,223,.72); font-size:11px; line-height:1.35; font-style:normal; }}
+    .opportunity-grid {{ display:grid; grid-template-columns:1fr 1fr; gap:6mm; margin-top:10mm; }}
+    .opportunity-grid i {{ width:3mm; height:3mm; background:#D6B56D; border-radius:50%; display:block; margin-bottom:3mm; }}
+    .plan-list {{ display:grid; gap:4mm; margin-top:10mm; }}
+    .plan-step {{ display:grid; grid-template-columns:12mm 1fr; gap:4mm; align-items:center; }}
+    .plan-step b {{ width:10mm; height:10mm; border-radius:50%; display:grid; place-items:center; background:#D6B56D; color:#171225; }}
+    .final-formula {{ margin-top:10mm; padding:8mm; border-left:2mm solid #D6B56D; background:rgba(255,255,255,.035); color:rgba(245,239,223,.78); line-height:1.55; }}
+  </style>
+</head>
+<body>
+  <section class="structured-page cover-page"><div class="cover-hero">
+    <div class="kicker">Астрологический отчёт</div>
+    <h1>{_safe_text(cover.get('title'), 'Соляр')}</h1>
+    <p>{_safe_text(cover.get('subtitle'), 'Персональный прогноз по сферам жизни')}</p>
+    <div class="cover-metrics">
+      <div><span>Период</span><b>{_safe_text(cover.get('period'))}</b></div>
+      <div><span>Место</span><b>{_safe_text(cover.get('place'))}</b></div>
+      <div><span>Общий балл</span><b>{_safe_score(cover.get('overall_score'))}/10</b></div>
+      <div><span>Топ-сфера</span><b>{_safe_text(cover.get('top_sphere'))}</b></div>
+    </div>
+  </div></section>
+  <section class="structured-page sphere-grid-page">
+    <div class="section-mark">Карта сфер года</div>
+    <h2>Год в одном экране</h2>
+    <div class="sphere-layout"><div class="radar-panel">{_radar_svg(cards)}</div><div class="score-list">{score_rows}</div></div>
+  </section>
+  <section class="structured-page">
+    <div class="section-mark">Главная тема года</div>
+    <div class="theme-card"><h2>{_safe_text(theme.get('title'))}</h2><p>{_safe_text(theme.get('text'))}</p><div class="theme-pills">{accents}</div></div>
+  </section>
+  {category_pages}
+  <section class="structured-page summary-page"><div class="section-mark">Сводка рисков</div><h2>Heatmap рисков</h2><div class="summary-grid">{risk_rows}</div></section>
+  <section class="structured-page summary-page"><div class="section-mark">Сводка возможностей</div><h2>4 карточки возможностей</h2><div class="opportunity-grid">{opportunity_cards}</div></section>
+  <section class="structured-page summary-page"><div class="section-mark">Практический план</div><h2>5 шагов года</h2><div class="plan-list">{plan_steps}</div><div class="final-formula">{_safe_text(report.get('final_formula'))}</div></section>
+</body>
+</html>"""
+
+
+async def structured_solar_to_pdf(report: dict, output_path: str) -> None:
+    await _html_string_to_pdf(_structured_solar_html(report), output_path)
+
+
+async def _html_string_to_pdf(html: str, output_path: str) -> None:
     from playwright.async_api import async_playwright
 
-    html = _build_report_html(title, markdown_text, visual_profile)
     async with async_playwright() as p:
         browser = await p.chromium.launch()
         page = await browser.new_page()
         await page.set_content(html, wait_until="networkidle")
         await page.pdf(path=output_path, format="A4", print_background=True, prefer_css_page_size=True)
         await browser.close()
+
+
+async def _html_to_pdf(
+    title: str,
+    markdown_text: str,
+    output_path: str,
+    visual_profile: dict | None,
+) -> None:
+    html = _build_report_html(title, markdown_text, visual_profile)
+    await _html_string_to_pdf(html, output_path)
 
 
 def _reportlab_markdown_to_pdf(
