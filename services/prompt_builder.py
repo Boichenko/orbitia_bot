@@ -208,6 +208,37 @@ def build_solar_json_prompt(
 — Палитра визуала в коде: #171225, #D6B56D, #7A5CFF. В JSON цвета не указывай.
 — Жёстко держи длину: summary до 140 знаков, каждый пункт списка до 75 знаков, main_theme.text до 420 знаков, final_formula до 220 знаков.
 
+HTML-РЕФЕРЕНС ГОТОВОГО PDF-ШАБЛОНА:
+Это НЕ формат ответа. Не возвращай HTML. Используй этот пример только чтобы понимать, какие данные нужны визуальному шаблону и насколько короткими должны быть тексты.
+
+<main class="solar-report">
+  <section class="cover">
+    <h1>Соляр 2025–2026</h1>
+    <div class="metrics">
+      <span>Период</span><span>Место</span><span>Общий балл</span><span>Топ-сфера</span>
+    </div>
+  </section>
+  <section class="sphere-map">
+    <svg class="radar-chart">7 сфер: career, money, relationships, home, health, communication, inner</svg>
+    <aside class="scores">короткий список сфер с баллами</aside>
+  </section>
+  <section class="main-theme">
+    <h2>Ёмкая формула года</h2>
+    <p>Короткий редакторский вывод.</p>
+    <div class="pills">3 акцента</div>
+  </section>
+  <section class="category career"><div class="growth-ladder">Экспертность → Видимость → Статус</div></section>
+  <section class="category money"><div class="resource-circle">Доход / Ценность / Контроль / Накопление</div></section>
+  <section class="category relationships"><div class="relationship-axis">Близость ↔ Свобода</div></section>
+  <section class="category home"><div class="foundation">Быт / Семья / Пространство / Безопасность</div></section>
+  <section class="category health"><div class="battery">Восстановление / Рабочий ресурс / Перегруз</div></section>
+  <section class="category communication"><div class="channel-bars">Обучение / Тексты / Встречи / Поездки</div></section>
+  <section class="category inner"><div class="inner-core">Тишина / Смысл / Восстановление</div></section>
+  <section class="risks"><div class="heatmap">4 риска с уровнем напряжения</div></section>
+  <section class="opportunities"><article>4 короткие карточки возможностей</article></section>
+  <section class="plan"><ol><li>5 практических шагов года</li></ol></section>
+</main>
+
 Верни JSON строго такой формы:
 {{
   "cover": {{
