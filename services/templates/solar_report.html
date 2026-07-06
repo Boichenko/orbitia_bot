@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <style>
+{{SOLAR_REPORT_CSS}}
+  </style>
+</head>
+<body>
+  <section class="page cover-page">
+    <div class="cover-copy">
+      <div class="kicker">персональный годовой отчёт</div>
+      <h1>{{COVER_TITLE}}</h1>
+      <p>{{COVER_SUBTITLE}}</p>
+      <dl class="cover-meta">
+        <div><dt>Период</dt><dd>{{COVER_PERIOD}}</dd></div>
+        <div><dt>Место соляра</dt><dd>{{COVER_PLACE}}</dd></div>
+        <div><dt>Общий балл года</dt><dd>{{COVER_SCORE}}<span>/10</span></dd></div>
+        <div><dt>Топ-сфера</dt><dd>{{COVER_TOP}}</dd></div>
+      </dl>
+    </div>
+    <div class="cover-art">{{COVER_ART}}</div>
+  </section>
+
+  <section class="page wheel-page">
+    <div class="section-head">
+      <span>01</span>
+      <b>Карта года</b>
+    </div>
+    <div class="wheel-layout">
+      <div>
+        <h2>Год в одном экране</h2>
+        <p class="lead">Радар показывает, какие сферы жизни в этом году активированы сильнее всего. Чем дальше точка от центра, тем плотнее событийная нагрузка.</p>
+        <div class="score-table">{{SPHERE_ROWS}}</div>
+      </div>
+      <div class="radar-card">{{RADAR_SVG}}</div>
+    </div>
+    <div class="map-analysis">
+      <span>Краткий анализ</span>
+      <p>{{MAP_SUMMARY}}</p>
+    </div>
+  </section>
+
+  <section class="page theme-page">
+    <div class="section-head">
+      <span>02</span>
+      <b>Главная тема</b>
+    </div>
+    <div class="theme-card">
+      <div class="eyebrow">главная тема года</div>
+      <h2>{{THEME_TITLE}}</h2>
+      <p>{{THEME_TEXT}}</p>
+      <div class="theme-pills">{{THEME_PILLS}}</div>
+    </div>
+    <div class="accent-block">
+      <div class="eyebrow">дополнительные акценты</div>
+      <div class="accent-grid">{{ADDITIONAL_ACCENTS}}</div>
+    </div>
+  </section>
+
+  {{CATEGORY_PAGES}}
+
+  <section class="page summary-page">
+    <div class="section-head">
+      <span>04</span>
+      <b>Сводка рисков</b>
+    </div>
+    <h2>Где нужна осторожность</h2>
+    <p class="lead">Эта страница собирает места, где год может давать перегруз, самообман, конфликт или расфокус. Это не запрет, а карта внимательности.</p>
+    <div class="risk-grid">{{RISK_ROWS}}</div>
+  </section>
+
+  <section class="page summary-page">
+    <div class="section-head">
+      <span>05</span>
+      <b>Сводка возможностей</b>
+    </div>
+    <h2>Куда вкладываться</h2>
+    <div class="opportunity-grid">{{OPPORTUNITY_CARDS}}</div>
+  </section>
+
+  <section class="page summary-page">
+    <div class="section-head">
+      <span>06</span>
+      <b>Практический план</b>
+    </div>
+    <h2>5 шагов года</h2>
+    <div class="plan-list">{{PLAN_STEPS}}</div>
+    <div class="final-formula">{{FINAL_FORMULA}}</div>
+  </section>
+</body>
+</html>

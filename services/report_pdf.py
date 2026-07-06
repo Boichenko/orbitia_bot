@@ -10,6 +10,8 @@ import math
 import re
 import xml.sax.saxutils as saxutils
 
+from services.solar_html_template import render_solar_html
+
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
@@ -1800,7 +1802,7 @@ def _structured_solar_html(report: dict) -> str:
 
 
 async def structured_solar_to_pdf(report: dict, output_path: str) -> None:
-    await _html_string_to_pdf(_structured_solar_html(report), output_path)
+    await _html_string_to_pdf(render_solar_html(report), output_path)
 
 
 def _synastry_map_cards(report: dict) -> list[dict]:
