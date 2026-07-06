@@ -30,7 +30,12 @@ from services.prompt_builder import (
     build_synastry_prompt,
 )
 from services.report_file import extract_main_theme
-from services.report_json import parse_report_json, structured_report_to_teaser
+from services.report_json import (
+    normalize_solar_report,
+    normalize_synastry_report,
+    parse_report_json,
+    structured_report_to_teaser,
+)
 from services.report_insights import build_solar_profile, build_synastry_profile
 from services.report_pdf import markdown_to_pdf, structured_solar_to_pdf, structured_synastry_to_pdf
 from services.solar_chart import compute_solar_return
@@ -1060,7 +1065,7 @@ async def _run_solar_analysis(answer_target, from_user: User, state: FSMContext)
         return
 
     try:
-        report_json = parse_report_json(buffer)
+        report_json = normalize_solar_report(parse_report_json(buffer))
     except Exception:
         # Аварийный путь: если Claude вернул невалидный JSON, не ломаем выдачу
         # пользователю, а собираем старый текстовый PDF.
@@ -1217,7 +1222,11 @@ async def _run_synastry_analysis(answer_target, from_user: User, state: FSMConte
         return
 
     try:
-        report_json = parse_report_json(buffer)
+        report_json = normalize_synastry_report(
+            parse_report_json(buffer),
+            first_name=first_name,
+            partner_name=partner_name,
+        )
     except Exception:
         fallback_prompt = build_synastry_prompt(
             chart_data,

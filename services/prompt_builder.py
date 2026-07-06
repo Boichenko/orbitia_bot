@@ -2,6 +2,11 @@
 
 from typing import Optional
 
+from services.report_templates import (
+    solar_report_template_text,
+    synastry_report_template_text,
+)
+
 
 def _format_table(rows) -> str:
     if not rows:
@@ -195,6 +200,7 @@ def build_solar_json_prompt(
     user_context: Optional[str] = None,
 ) -> str:
     data_block = _build_data_block(chart_data, person_name, user_context)
+    template_text = solar_report_template_text()
     return f"""Ты — профессиональный астролог-редактор. Твоя задача — проанализировать УЖЕ ГОТОВЫЙ расчёт соляра и вернуть только валидный JSON для визуального PDF-шаблона.
 
 ВАЖНО:
@@ -255,70 +261,14 @@ HTML-РЕФЕРЕНС ГОТОВОГО PDF-ШАБЛОНА:
   <section class="plan"><ol><li>5 практических шагов года</li></ol></section>
 </main>
 
-Верни JSON строго такой формы:
-{{
-  "cover": {{
-    "title": "Соляр 2025–2026",
-    "subtitle": "Персональный прогноз по сферам жизни",
-    "period": "2025–2026",
-    "place": "город",
-    "overall_score": 8,
-    "top_sphere": "Деньги"
-  }},
-  "sphere_map": [
-    {{"key": "career", "title": "Карьера", "score": 8, "meaning": "одна короткая строка"}},
-    {{"key": "money", "title": "Деньги", "score": 8, "meaning": "одна короткая строка"}},
-    {{"key": "relationships", "title": "Отношения", "score": 8, "meaning": "одна короткая строка"}},
-    {{"key": "home", "title": "Дом", "score": 8, "meaning": "одна короткая строка"}},
-    {{"key": "health", "title": "Здоровье", "score": 8, "meaning": "одна короткая строка"}},
-    {{"key": "communication", "title": "Общение", "score": 8, "meaning": "одна короткая строка"}},
-    {{"key": "inner", "title": "Внутреннее", "score": 8, "meaning": "одна короткая строка"}}
-  ],
-  "map_summary": "короткий абзац анализа круга: какие 2–3 сферы самые сильные, где ниже балл и что это значит для года",
-  "main_theme": {{
-    "title": "ёмкая формула года",
-    "text": "1–2 коротких абзаца",
-    "accents": ["акцент 1", "акцент 2", "акцент 3"],
-    "additional_accents": [
-      {{"title": "дополнительный акцент 1", "text": "1 короткое предложение"}},
-      {{"title": "дополнительный акцент 2", "text": "1 короткое предложение"}},
-      {{"title": "дополнительный акцент 3", "text": "1 короткое предложение"}}
-    ]
-  }},
-  "categories": [
-    {{
-      "key": "career",
-      "title": "Карьера и статус",
-      "score": 8,
-      "summary": "короткий вывод",
-      "amplified": ["3–4 пункта"],
-      "manifestations": ["3–4 пункта"],
-      "risks": ["2–3 пункта"],
-      "actions": ["3–4 пункта"],
-      "astro_basis": ["2–4 конкретных фактора из таблиц"]
-    }}
-  ],
-  "risk_summary": [
-    {{"title": "Перегруз", "level": 7, "risk": "коротко", "support": "что поможет"}},
-    {{"title": "Самообман", "level": 7, "risk": "коротко", "support": "что поможет"}},
-    {{"title": "Молчание о желаниях", "level": 7, "risk": "коротко", "support": "что поможет"}},
-    {{"title": "Расфокус", "level": 7, "risk": "коротко", "support": "что поможет"}}
-  ],
-  "opportunities": [
-    {{"title": "Рост статуса", "text": "1 предложение"}},
-    {{"title": "Деньги через ценность", "text": "1 предложение"}},
-    {{"title": "Новые знания", "text": "1 предложение"}},
-    {{"title": "Личная зрелость", "text": "1 предложение"}}
-  ],
-  "plan": [
-    {{"step": 1, "action": "короткое действие"}},
-    {{"step": 2, "action": "короткое действие"}},
-    {{"step": 3, "action": "короткое действие"}},
-    {{"step": 4, "action": "короткое действие"}},
-    {{"step": 5, "action": "короткое действие"}}
-  ],
-  "final_formula": "один финальный абзац"
-}}
+ЗАПОЛНЯЕМЫЙ JSON-ШАБЛОН:
+— Верни этот же JSON-объект.
+— Не удаляй ключи.
+— Не меняй key у категорий и сфер.
+— Замени примерные значения на персональные выводы по расчёту.
+— Если данных для поля мало, заполни осторожной редакторской формулировкой без выдуманных астрологических фактов.
+
+{template_text}
 
 Категории в "categories" должны быть ровно в этом порядке и с этими key:
 career, money, relationships, home, health, communication, inner.
@@ -672,6 +622,7 @@ def build_synastry_json_prompt(
     partner_name: str = "",
 ) -> str:
     data_block = _build_synastry_data_block(chart_data, first_name, partner_name)
+    template_text = synastry_report_template_text(first_name, partner_name)
     return f"""Ты — профессиональный астролог-редактор отношений. Проанализируй УЖЕ ГОТОВЫЙ расчёт синастрии и верни только валидный JSON для премиального PDF-шаблона.
 
 ВАЖНО:
@@ -703,131 +654,14 @@ def build_synastry_json_prompt(
 — Риски: heatmap без красного/оранжевого.
 — Рекомендации: вертикальный список "что делать, если...".
 
-Верни JSON строго такой формы:
-{{
-  "cover": {{
-    "title": "Синастрия {first_name or 'Анна'} и {partner_name or 'Александр'}",
-    "subtitle": "Разбор совместимости по любви, коммуникации, химии и долгосрочному потенциалу.",
-    "overall_score": 8,
-    "connection_type": "глубокая, трансформирующая",
-    "main_resource": "магнитное притяжение",
-    "main_risk": "разные языки любви",
-    "score_words": ["притяжение", "глубина", "рост"]
-  }},
-  "relationship_map": [
-    {{"key": "emotions", "title": "Эмоции", "score": 8, "meaning": "коротко"}},
-    {{"key": "chemistry", "title": "Химия", "score": 10, "meaning": "коротко"}},
-    {{"key": "communication", "title": "Коммуникация", "score": 5, "meaning": "коротко"}},
-    {{"key": "sex", "title": "Секс", "score": 8, "meaning": "коротко"}},
-    {{"key": "longterm", "title": "Долгосрочность", "score": 8, "meaning": "коротко"}},
-    {{"key": "home", "title": "Быт", "score": 7, "meaning": "коротко"}},
-    {{"key": "risks", "title": "Риски", "score": 7, "meaning": "коротко"}}
-  ],
-  "formula": {{
-    "title": "Формула пары",
-    "phrase": "ёмкая фраза о связи",
-    "text": "3–4 строки пояснения",
-    "indicators": [
-      {{"label": "Магнитизм", "value": 10}},
-      {{"label": "Спокойствие", "value": 5}},
-      {{"label": "Долгосрочность", "value": 8}},
-      {{"label": "Простота", "value": 3}},
-      {{"label": "Трансформация", "value": 10}}
-    ]
-  }},
-  "emotions": {{
-    "summary": "короткий вывод",
-    "support": ["2–3 пункта"],
-    "mismatch": ["2–3 пункта"],
-    "scales": [
-      {{"label": "Поддержка", "value": 9, "tone": "resource"}},
-      {{"label": "Безопасность", "value": 8, "tone": "resource"}},
-      {{"label": "Понимание", "value": 6, "tone": "resource"}},
-      {{"label": "Интенсивность", "value": 9, "tone": "tension"}},
-      {{"label": "Раздражение", "value": 7, "tone": "tension"}}
-    ]
-  }},
-  "chemistry": {{
-    "score": 10,
-    "label": "Сильное притяжение",
-    "summary": "короткий вывод",
-    "amplifies": ["2–3 пункта"],
-    "dims": ["2–3 пункта"],
-    "parameters": [
-      {{"label": "Физическое притяжение", "value": 10}},
-      {{"label": "Сексуальная искра", "value": 9}},
-      {{"label": "Синхронность инициативы", "value": 5}},
-      {{"label": "Глубина привязанности", "value": 10}}
-    ]
-  }},
-  "love_languages": {{
-    "first": {{"name": "{first_name or 'Первый партнёр'}", "items": ["Свобода", "Искренность", "Смысл"]}},
-    "partner": {{"name": "{partner_name or 'Партнёр'}", "items": ["Прямота", "Действие", "Устойчивость"]}},
-    "bridge": "переводить ожидания в слова",
-    "summary": "короткий вывод"
-  }},
-  "communication": {{
-    "summary": "короткий вывод",
-    "rows": [
-      {{"from": "смыслы", "to": "факты"}},
-      {{"from": "глубина", "to": "практика"}},
-      {{"from": "эмоциональный подтекст", "to": "конкретика"}},
-      {{"from": "свобода выражения", "to": "стабильность"}}
-    ]
-  }},
-  "triggers": [
-    {{"title": "Критика / инициатива", "manifestation": "коротко", "action": "что делать", "level": 4}},
-    {{"title": "Неясность мотивов", "manifestation": "коротко", "action": "что делать", "level": 3}},
-    {{"title": "Интенсивность", "manifestation": "коротко", "action": "что делать", "level": 4}},
-    {{"title": "Разный язык любви", "manifestation": "коротко", "action": "что делать", "level": 5}},
-    {{"title": "Ревность и контроль", "manifestation": "коротко", "action": "что делать", "level": 3}}
-  ],
-  "longterm": {{
-    "score": 8,
-    "summary": "короткий вывод",
-    "pillars": [
-      {{"label": "Обязательства", "value": 9}},
-      {{"label": "Будущее", "value": 9}},
-      {{"label": "Строить", "value": 8}},
-      {{"label": "Кризисы", "value": 7}}
-    ],
-    "weak_spot": "эмоциональная простота"
-  }},
-  "influence": {{
-    "first_to_partner": {{"title": "{first_name or 'Первый партнёр'} → {partner_name or 'Партнёр'}", "items": ["3–4 пункта"]}},
-    "partner_to_first": {{"title": "{partner_name or 'Партнёр'} → {first_name or 'Первый партнёр'}", "items": ["3–4 пункта"]}}
-  }},
-  "resources": [
-    {{"title": "Физическая химия", "text": "1 короткое предложение"}},
-    {{"title": "Долгосрочный фундамент", "text": "1 короткое предложение"}},
-    {{"title": "Эмоциональная поддержка", "text": "1 короткое предложение"}},
-    {{"title": "Развитие через отношения", "text": "1 короткое предложение"}},
-    {{"title": "Совместное движение", "text": "1 короткое предложение"}},
-    {{"title": "Ощущение судьбоносности", "text": "1 короткое предложение"}}
-  ],
-  "risks": [
-    {{"title": "Давление и критика", "level": "высокий", "text": "коротко"}},
-    {{"title": "Разный язык любви", "level": "высокий", "text": "коротко"}},
-    {{"title": "Ревность и контроль", "level": "средний", "text": "коротко"}},
-    {{"title": "Неясность мотивов", "level": "средний", "text": "коротко"}},
-    {{"title": "Эмоциональное перенасыщение", "level": "высокий", "text": "коротко"}},
-    {{"title": "Зависимость от интенсивности", "level": "средний", "text": "коротко"}}
-  ],
-  "recommendations": [
-    {{"situation": "Он критикует", "action": "короткое действие"}},
-    {{"situation": "Она чувствует неясность", "action": "короткое действие"}},
-    {{"situation": "Пропадает близость", "action": "короткое действие"}},
-    {{"situation": "Слишком много интенсивности", "action": "короткое действие"}},
-    {{"situation": "Разные языки любви", "action": "короткое действие"}}
-  ],
-  "final": {{
-    "title": "Итоговая формула",
-    "text": "финальный абзац",
-    "keeps": "что держит пару",
-    "breaks": "что может ломать",
-    "growth": "что помогает расти"
-  }}
-}}
+ЗАПОЛНЯЕМЫЙ JSON-ШАБЛОН:
+— Верни этот же JSON-объект.
+— Не удаляй ключи.
+— Не меняй key у сфер relationship_map.
+— Замени примерные значения на персональные выводы по расчёту.
+— Если данных для поля мало, заполни осторожной редакторской формулировкой без выдуманных астрологических фактов.
+
+{template_text}
 
 ДАННЫЕ РАСЧЁТА:
 {data_block}"""
