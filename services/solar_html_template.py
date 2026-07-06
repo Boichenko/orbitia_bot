@@ -244,7 +244,7 @@ def _category_page(category: dict, key: str, number: int) -> str:
             <h2>{_safe(category.get("title"), _DEFAULT_TITLES.get(key, key))}</h2>
             <p>{_safe(category.get("summary"))}</p>
           </div>
-          <strong class="score-badge"><i></i>{score}<span>/10</span></strong>
+          <div class="score-badge"><span class="score-dot"></span><b>{score}</b><em>/10</em></div>
         </header>
         <div class="category-divider"></div>
         <div class="category-layout">
@@ -296,10 +296,18 @@ def _first_item(items) -> str:
 
 
 def _career_ladder(score: int) -> str:
-    bars = "".join(f"<span style=\"opacity:{0.25 + index * 0.075:.2f}\"></span>" for index in range(score))
+    bars = "".join(
+        f"""
+        <span class="{'active' if index < score else ''}">
+          <i>{index + 1}</i>
+        </span>
+        """
+        for index in range(10)
+    )
     return f"""
     <div class="visual-card">
       <div class="visual-title">карьерная лестница</div>
+      <div class="ladder-score"><b>{score}/10</b><span>{score * 10}% активации статуса</span></div>
       <div class="ladder">{bars}</div>
       <div class="visual-caption"><span>сейчас</span><span>пик года</span></div>
     </div>
@@ -307,16 +315,23 @@ def _career_ladder(score: int) -> str:
 
 
 def _money_ring(score: int) -> str:
+    metrics = [
+        ("Доходы", min(100, score * 10 + 5)),
+        ("Ценность", score * 10),
+        ("Контроль", max(20, score * 10 - 10)),
+        ("Стратегия", min(100, score * 10 + 10)),
+    ]
+    rows = "".join(
+        f"<div><span>{_safe(label)}</span><b>{value}%</b></div>"
+        for label, value in metrics
+    )
     return f"""
     <div class="visual-card">
       <div class="visual-title">ресурсная карта</div>
       <div class="ring-wrap">
-        <span class="ring-label a">Доходы</span>
-        <span class="ring-label b">Ценность</span>
-        <span class="ring-label c">Контроль</span>
-        <span class="ring-label d">Стратегия</span>
-        <div class="ring-center">{score}/10</div>
+        <div class="ring-center"><b>{score}/10</b><span>ресурс</span></div>
       </div>
+      <div class="resource-metrics">{rows}</div>
     </div>
     """
 
@@ -327,7 +342,7 @@ def _relationship_axis(score: int) -> str:
     <div class="visual-card">
       <div class="visual-title">близость ↔ свобода</div>
       <div class="axis">
-        <div class="axis-line" style="--pos:{position}%"><i></i></div>
+        <div class="axis-line" style="--pos:{position}%"><span></span></div>
         <div class="axis-labels"><span>близость</span><span>свобода</span></div>
       </div>
     </div>
@@ -354,10 +369,11 @@ def _foundation(score: int) -> str:
 
 
 def _battery(score: int) -> str:
+    percent = score * 10
     return f"""
     <div class="visual-card">
       <div class="visual-title">батарея энергии</div>
-      <div class="battery" style="--fill:{score * 10}%"><i></i></div>
+      <div class="battery" style="--fill:{percent}%"><span></span><b>{percent}%</b></div>
       <div class="visual-caption"><span>усталость</span><span>восстановление</span></div>
     </div>
     """
