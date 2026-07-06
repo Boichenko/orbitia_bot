@@ -249,7 +249,6 @@ def _category_page(category: dict, key: str, number: int) -> str:
         <div class="category-divider"></div>
         <div class="category-layout">
           <div>
-            <p class="category-summary">{_safe(category.get("summary"))}</p>
             <div class="category-columns">
               <div><div class="block-title">Что усиливается</div><ul>{_list_items(category.get("amplified"), 4)}</ul></div>
               <div><div class="block-title">Возможные события</div><ul>{_list_items(category.get("manifestations"), 4)}</ul></div>
@@ -262,6 +261,16 @@ def _category_page(category: dict, key: str, number: int) -> str:
             </div>
           </div>
           {_category_visual(key, score)}
+        </div>
+        <div class="category-focus">
+          <article>
+            <div class="block-title">Главный вывод</div>
+            <p>{_safe(category.get("summary"))}</p>
+          </article>
+          <article>
+            <div class="block-title">Практическая опора</div>
+            <p>{_safe(_first_item(category.get("actions")), "Держать фокус на конкретном действии, а не на тревожном ожидании.")}</p>
+          </article>
         </div>
       </div>
     </section>
@@ -278,6 +287,12 @@ def _category_visual(key: str, score: int) -> str:
         "communication": _communication_bars,
         "inner": _inner_core,
     }.get(key, _career_ladder)(score)
+
+
+def _first_item(items) -> str:
+    if isinstance(items, list) and items:
+        return str(items[0])
+    return ""
 
 
 def _career_ladder(score: int) -> str:

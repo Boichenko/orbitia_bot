@@ -31,7 +31,7 @@ p {
 .page {
   position: relative;
   width: 210mm;
-  min-height: 297mm;
+  height: 297mm;
   page-break-after: always;
   overflow: hidden;
   padding: 18mm;
@@ -195,8 +195,8 @@ p {
 
 .wheel-layout {
   display: grid;
-  grid-template-columns: 88mm 1fr;
-  gap: 13mm;
+  grid-template-columns: 82mm 1fr;
+  gap: 10mm;
   align-items: center;
 }
 
@@ -263,15 +263,15 @@ p {
 }
 
 .radar-card {
-  min-height: 118mm;
+  min-height: 106mm;
   display: grid;
   place-items: center;
-  padding: 7mm;
+  padding: 5mm;
 }
 
 .radar-svg {
-  width: 104mm;
-  height: 104mm;
+  width: 88mm;
+  height: 88mm;
   overflow: visible;
 }
 
@@ -404,7 +404,7 @@ p {
 .category-shell {
   position: relative;
   z-index: 2;
-  min-height: 273mm;
+  height: 273mm;
   border: 1px solid rgba(214, 181, 109, .18);
   border-radius: 9mm;
   padding: 11mm;
@@ -419,16 +419,16 @@ p {
 }
 
 .category-header h2 {
-  margin-top: 4mm;
+  margin-top: 3mm;
   color: #f5efdf;
-  font-size: 38px;
+  font-size: 35px;
   line-height: 1.02;
 }
 
 .category-header p {
-  margin-top: 3mm;
+  margin-top: 2.5mm;
   color: rgba(245, 239, 223, .62);
-  font-size: 15px;
+  font-size: 13.2px;
   line-height: 1.35;
 }
 
@@ -459,14 +459,14 @@ p {
 
 .category-divider {
   height: 1px;
-  margin: 9mm 0 10mm;
+  margin: 7mm 0 7mm;
   background: linear-gradient(90deg, rgba(214, 181, 109, .42), transparent);
 }
 
 .category-layout {
   display: grid;
-  grid-template-columns: 1.13fr .87fr;
-  gap: 10mm;
+  grid-template-columns: 1.18fr .82fr;
+  gap: 7mm;
   align-items: center;
 }
 
@@ -479,8 +479,8 @@ p {
 .category-columns {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 5mm 6mm;
-  margin-top: 7mm;
+  gap: 3.8mm 5mm;
+  margin-top: 0;
 }
 
 .category-columns div {
@@ -488,36 +488,58 @@ p {
 }
 
 .block-title {
-  margin-bottom: 2mm;
+  margin-bottom: 1.5mm;
 }
 
 .category-columns ul {
   margin: 0;
-  padding-left: 4mm;
+  padding-left: 3.5mm;
   color: rgba(245, 239, 223, .70);
-  font-size: 10.6px;
-  line-height: 1.38;
+  font-size: 9.45px;
+  line-height: 1.26;
 }
 
 .category-columns li {
-  margin-bottom: 1.1mm;
+  margin-bottom: .75mm;
 }
 
 .astro-basis {
-  margin-top: 7mm;
+  margin-top: 4.5mm;
 }
 
 .astro-basis p {
-  margin-top: 2mm;
+  margin-top: 1.5mm;
   color: rgba(245, 239, 223, .66);
   font-family: "JetBrains Mono", DejaVu Sans Mono, monospace;
-  font-size: 10.5px;
-  line-height: 1.45;
+  font-size: 9.2px;
+  line-height: 1.33;
+}
+
+.category-focus {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5mm;
+  margin-top: 7mm;
+}
+
+.category-focus article {
+  min-height: 25mm;
+  border: 1px solid rgba(214, 181, 109, .14);
+  border-radius: 5mm;
+  background: rgba(255, 255, 255, .03);
+  padding: 4mm 5mm;
+}
+
+.category-focus p {
+  margin-top: 2mm;
+  color: rgba(245, 239, 223, .68);
+  font-size: 10.2px;
+  line-height: 1.38;
 }
 
 .visual-card {
-  min-height: 88mm;
-  padding: 8mm;
+  min-height: 76mm;
+  padding: 6mm;
 }
 
 .visual-title {
@@ -530,7 +552,7 @@ p {
 
 .ladder {
   display: flex;
-  height: 62mm;
+  height: 52mm;
   flex-direction: column-reverse;
   gap: 2mm;
   margin-top: 8mm;
@@ -552,9 +574,9 @@ p {
 
 .ring-wrap {
   position: relative;
-  width: 72mm;
-  height: 72mm;
-  margin: 8mm auto 0;
+  width: 61mm;
+  height: 61mm;
+  margin: 6mm auto 0;
   border-radius: 50%;
   background: conic-gradient(from -90deg, rgba(214, 181, 109, .78) 0 90deg, rgba(122, 92, 255, .36) 90deg 180deg, rgba(214, 181, 109, .42) 180deg 270deg, rgba(122, 92, 255, .22) 270deg 360deg);
 }
@@ -562,7 +584,7 @@ p {
 .ring-wrap:before {
   content: "";
   position: absolute;
-  inset: 17mm;
+  inset: 14.5mm;
   border-radius: 50%;
   background: #171225;
   border: 1px solid rgba(214, 181, 109, .35);
@@ -570,7 +592,7 @@ p {
 
 .ring-center {
   position: absolute;
-  inset: 25mm;
+  inset: 21mm;
   display: grid;
   place-items: center;
   color: #d6b56d;
@@ -596,7 +618,7 @@ p {
 .ring-label.d { top: 17mm; left: -2mm; }
 
 .axis {
-  margin-top: 23mm;
+  margin-top: 18mm;
 }
 
 .axis-line {
@@ -630,14 +652,14 @@ p {
 }
 
 .foundation-shape {
-  width: 72mm;
-  margin: 5mm auto 0;
+  width: 62mm;
+  margin: 4mm auto 0;
 }
 
 .battery {
   position: relative;
-  height: 25mm;
-  margin: 18mm 0 7mm;
+  height: 22mm;
+  margin: 15mm 0 6mm;
   border: 2px solid #d6b56d;
   border-radius: 5mm;
   padding: 2mm;
@@ -664,13 +686,13 @@ p {
 
 .bar-list {
   display: grid;
-  gap: 5mm;
-  margin-top: 9mm;
+  gap: 4mm;
+  margin-top: 7mm;
 }
 
 .bar-row {
   display: grid;
-  grid-template-columns: 25mm 1fr 13mm;
+  grid-template-columns: 23mm 1fr 13mm;
   align-items: center;
   gap: 3mm;
   font-size: 10px;
@@ -701,12 +723,12 @@ p {
   position: relative;
   display: grid;
   place-items: center;
-  height: 74mm;
+  height: 63mm;
 }
 
 .core svg {
-  width: 68mm;
-  height: 68mm;
+  width: 58mm;
+  height: 58mm;
 }
 
 .core b {
