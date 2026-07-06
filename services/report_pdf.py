@@ -1604,14 +1604,19 @@ def _structured_category_page(key: str, report: dict) -> str:
     score = _safe_score(category.get("score"))
     return f"""
     <section class="structured-page category-page">
-      <div class="section-mark">Категория</div>
-      <header class="category-header">
-        <h2>{_safe_text(category.get("title"))}</h2>
-        <strong>{score}/10</strong>
-      </header>
-      <div class="category-layout">
-        {_category_visual(key, category)}
-        {_category_text_block(category)}
+      <div class="category-shell">
+        <header class="category-header">
+          <div>
+            <div class="section-mark">Категория</div>
+            <h2>{_safe_text(category.get("title"))}</h2>
+          </div>
+          <strong><i></i>{score}<span>/10</span></strong>
+        </header>
+        <div class="category-divider"></div>
+        <div class="category-layout">
+          {_category_text_block(category)}
+          {_category_visual(key, category)}
+        </div>
       </div>
     </section>
     """
@@ -1621,11 +1626,20 @@ def _structured_solar_html(report: dict) -> str:
     cover = report.get("cover") or {}
     theme = report.get("main_theme") or {}
     cards = _sphere_cards_for_radar(report)
+    chart_image = _asset_data_uri(os.path.join(os.path.dirname(os.path.dirname(__file__)), "assets", "chart-wheel.jpg"))
     score_rows = "\n".join(
         f"<div class=\"score-row\"><span>{_safe_text(card['title'])}</span><b>{_safe_score(card['score'])}</b></div>"
         for card in cards
     )
     accents = "".join(f"<span>{_safe_text(item)}</span>" for item in (theme.get("accents") or [])[:3])
+    extra_accents_source = theme.get("additional_accents") or [
+        {"title": item, "text": ""}
+        for item in (theme.get("accents") or [])[:3]
+    ]
+    extra_accents = "".join(
+        f"<article><b>{_safe_text(item.get('title') if isinstance(item, dict) else item)}</b><span>{_safe_text(item.get('text') if isinstance(item, dict) else '')}</span></article>"
+        for item in extra_accents_source[:3]
+    )
     category_pages = "\n".join(
         _structured_category_page(key, report)
         for key in ["career", "money", "relationships", "home", "health", "communication", "inner"]
@@ -1659,14 +1673,18 @@ def _structured_solar_html(report: dict) -> str:
     body {{ margin:0; background:#171225; color:#f5efdf; font-family: Manrope, DejaVu Sans, Arial, sans-serif; }}
     h1,h2,h3 {{ font-family: Cormorant Garamond, Georgia, serif; letter-spacing:0; }}
     .structured-page {{ width:210mm; height:297mm; padding:18mm; page-break-after:always; overflow:hidden; background:radial-gradient(circle at 82% 16%, rgba(122,92,255,.23), transparent 35%), #171225; }}
-    .cover-hero {{ height:100%; border:1px solid rgba(214,181,109,.55); border-radius:8mm; padding:22mm; display:flex; flex-direction:column; justify-content:center; }}
+    .cover-hero {{ height:100%; border:1px solid rgba(214,181,109,.55); border-radius:8mm; padding:18mm; display:grid; grid-template-columns:1.05fr .95fr; gap:10mm; align-items:center; }}
+    .cover-copy {{ min-width:0; }}
     .cover-hero .kicker,.section-mark {{ color:#D6B56D; font-size:9px; font-weight:800; letter-spacing:4px; text-transform:uppercase; }}
-    .cover-hero h1 {{ margin:9mm 0 3mm; font-size:54px; line-height:1; }}
+    .cover-hero h1 {{ margin:9mm 0 3mm; font-size:50px; line-height:1; }}
     .cover-hero p {{ max-width:118mm; color:rgba(245,239,223,.72); font-size:15px; line-height:1.55; }}
-    .cover-metrics {{ display:grid; grid-template-columns:repeat(4,1fr); gap:4mm; margin-top:22mm; }}
+    .cover-metrics {{ display:grid; grid-template-columns:repeat(2,1fr); gap:4mm; margin-top:18mm; }}
     .cover-metrics div {{ border-top:1px solid rgba(214,181,109,.35); padding-top:4mm; }}
     .cover-metrics span {{ display:block; color:rgba(245,239,223,.45); font-size:9px; letter-spacing:2px; text-transform:uppercase; }}
     .cover-metrics b {{ display:block; margin-top:2mm; color:#f5efdf; font-size:13px; line-height:1.25; }}
+    .cover-art {{ min-height:118mm; border-radius:8mm; border:1px solid rgba(214,181,109,.2); background:radial-gradient(circle at 50% 50%, rgba(214,181,109,.18), transparent 42%), rgba(255,255,255,.035); position:relative; overflow:hidden; }}
+    .cover-art img {{ width:100%; height:100%; min-height:118mm; object-fit:cover; opacity:.74; filter:saturate(.9) contrast(1.05); }}
+    .cover-art:after {{ content:""; position:absolute; inset:0; background:linear-gradient(180deg, rgba(23,18,37,.05), rgba(23,18,37,.42)); }}
     .sphere-grid-page h2,.theme-card h2,.category-header h2,.summary-page h2 {{ margin:0; font-size:37px; line-height:1.05; }}
     .sphere-layout {{ display:grid; grid-template-columns:112mm 1fr; gap:12mm; align-items:center; margin-top:18mm; }}
     .radar-panel {{ min-height:125mm; border:1px solid rgba(214,181,109,.22); border-radius:8mm; display:grid; place-items:center; background:rgba(255,255,255,.035); }}
@@ -1679,14 +1697,27 @@ def _structured_solar_html(report: dict) -> str:
     .score-list {{ display:grid; gap:3mm; }}
     .score-row {{ display:flex; justify-content:space-between; gap:4mm; border-bottom:1px solid rgba(214,181,109,.15); padding:3.5mm 0; color:rgba(245,239,223,.82); }}
     .score-row b {{ color:#D6B56D; }}
-    .theme-card {{ margin-top:28mm; border-left:2mm solid #D6B56D; padding:12mm 14mm; background:rgba(255,255,255,.04); border-radius:0 7mm 7mm 0; }}
+    .map-summary {{ margin-top:10mm; max-width:166mm; padding:6mm 7mm; border-left:1.5mm solid #D6B56D; background:rgba(255,255,255,.035); color:rgba(245,239,223,.74); font-size:13px; line-height:1.5; }}
+    .theme-card {{ margin-top:20mm; border-left:2mm solid #D6B56D; padding:12mm 14mm; background:rgba(255,255,255,.04); border-radius:0 7mm 7mm 0; }}
     .theme-card p {{ max-width:150mm; color:rgba(245,239,223,.78); font-size:14px; line-height:1.55; }}
     .theme-pills {{ display:flex; gap:3mm; margin-top:8mm; }}
     .theme-pills span {{ border:1px solid rgba(214,181,109,.3); border-radius:999px; padding:2.2mm 4mm; color:#D6B56D; font-size:10px; }}
-    .category-header {{ display:flex; justify-content:space-between; align-items:start; gap:10mm; margin-top:8mm; }}
-    .category-header strong {{ color:#D6B56D; font-size:28px; }}
-    .category-layout {{ display:grid; grid-template-columns:78mm 1fr; gap:10mm; margin-top:12mm; align-items:start; }}
-    .visual {{ min-height:78mm; border:1px solid rgba(214,181,109,.18); border-radius:7mm; background:rgba(255,255,255,.04); padding:8mm; }}
+    .additional-accents {{ margin-top:11mm; }}
+    .additional-accents h3 {{ margin:0 0 5mm; color:#D6B56D; font-family:Manrope, DejaVu Sans, Arial, sans-serif; font-size:10px; letter-spacing:3px; text-transform:uppercase; }}
+    .additional-grid {{ display:grid; grid-template-columns:repeat(3,1fr); gap:5mm; }}
+    .additional-grid article {{ min-height:34mm; border:1px solid rgba(214,181,109,.16); border-radius:6mm; padding:5mm; background:rgba(255,255,255,.035); }}
+    .additional-grid b {{ display:block; color:#f5efdf; font-size:13px; line-height:1.25; }}
+    .additional-grid span {{ display:block; margin-top:2mm; color:rgba(245,239,223,.62); font-size:10.5px; line-height:1.35; }}
+    .category-page {{ padding:12mm; }}
+    .category-shell {{ height:100%; border:1px solid rgba(214,181,109,.20); border-radius:8mm; padding:12mm; background:rgba(255,255,255,.018); }}
+    .category-header {{ display:flex; justify-content:space-between; align-items:start; gap:10mm; }}
+    .category-header h2 {{ margin-top:4mm; font-size:40px; }}
+    .category-header strong {{ min-width:31mm; height:14mm; border:1px solid rgba(214,181,109,.28); border-radius:999px; display:flex; align-items:center; justify-content:center; gap:2mm; color:#D6B56D; font-size:19px; font-weight:800; }}
+    .category-header strong i {{ width:3mm; height:3mm; border-radius:50%; background:#D6B56D; box-shadow:0 0 12px rgba(214,181,109,.55); }}
+    .category-header strong span {{ color:rgba(245,239,223,.42); }}
+    .category-divider {{ height:1px; margin:10mm 0; background:linear-gradient(90deg, transparent, rgba(214,181,109,.5), transparent); }}
+    .category-layout {{ display:grid; grid-template-columns:1.15fr .85fr; gap:10mm; align-items:center; }}
+    .visual {{ min-height:76mm; border:1px solid rgba(214,181,109,.18); border-radius:7mm; background:rgba(255,255,255,.04); padding:8mm; }}
     .visual-score {{ color:#D6B56D; font-size:27px; font-weight:800; margin-bottom:7mm; }}
     .ladder-steps {{ display:flex; flex-direction:column-reverse; gap:4mm; align-items:flex-start; }}
     .ladder-step {{ width:var(--w); padding:4mm; border-radius:3mm; background:rgba(122,92,255,.18); border:1px solid rgba(122,92,255,.36); }}
@@ -1716,11 +1747,11 @@ def _structured_solar_html(report: dict) -> str:
     .inner-core {{ position:relative; display:grid; place-items:center; }}
     .inner-core div {{ width:38mm; height:38mm; border-radius:50%; display:grid; place-items:center; background:rgba(122,92,255,.28); border:1px solid #D6B56D; color:#D6B56D; font-weight:800; }}
     .core-label {{ position:absolute; color:rgba(245,239,223,.72); font-size:11px; }} .core-label.top {{ top:10mm; }} .core-label.left {{ left:8mm; bottom:20mm; }} .core-label.right {{ right:5mm; bottom:20mm; }}
-    .category-summary {{ color:#D6B56D; font-size:14px; line-height:1.45; margin:0 0 6mm; }}
+    .category-summary {{ color:rgba(245,239,223,.86); font-size:17px; line-height:1.45; margin:0 0 8mm; }}
     .category-columns {{ display:grid; grid-template-columns:1fr 1fr; gap:5mm; }}
     .category-columns div {{ break-inside:avoid; }}
-    .category-columns h4 {{ margin:0 0 2mm; color:#f5efdf; font-size:11px; text-transform:uppercase; letter-spacing:1.5px; }}
-    .category-columns ul {{ margin:0; padding-left:4mm; color:rgba(245,239,223,.72); font-size:10.5px; line-height:1.35; }}
+    .category-columns h4 {{ margin:0 0 2mm; color:#D6B56D; font-size:9px; text-transform:uppercase; letter-spacing:2.4px; }}
+    .category-columns ul {{ margin:0; padding-left:4mm; color:rgba(245,239,223,.72); font-size:11.5px; line-height:1.45; }}
     .summary-grid {{ display:grid; grid-template-columns:1fr 1fr; gap:6mm; margin-top:10mm; }}
     .risk-heat-row,.opportunity-grid article,.plan-step {{ border:1px solid rgba(214,181,109,.16); border-radius:5mm; background:rgba(255,255,255,.04); padding:5mm; }}
     .risk-heat-row {{ background:linear-gradient(90deg, rgba(122,92,255,.28), rgba(255,255,255,.035) var(--level)); min-height:34mm; }}
@@ -1736,24 +1767,29 @@ def _structured_solar_html(report: dict) -> str:
 </head>
 <body>
   <section class="structured-page cover-page"><div class="cover-hero">
-    <div class="kicker">Астрологический отчёт</div>
-    <h1>{_safe_text(cover.get('title'), 'Соляр')}</h1>
-    <p>{_safe_text(cover.get('subtitle'), 'Персональный прогноз по сферам жизни')}</p>
-    <div class="cover-metrics">
-      <div><span>Период</span><b>{_safe_text(cover.get('period'))}</b></div>
-      <div><span>Место</span><b>{_safe_text(cover.get('place'))}</b></div>
-      <div><span>Общий балл</span><b>{_safe_score(cover.get('overall_score'))}/10</b></div>
-      <div><span>Топ-сфера</span><b>{_safe_text(cover.get('top_sphere'))}</b></div>
+    <div class="cover-copy">
+      <div class="kicker">Астрологический отчёт</div>
+      <h1>{_safe_text(cover.get('title'), 'Соляр')}</h1>
+      <p>{_safe_text(cover.get('subtitle'), 'Персональный прогноз по сферам жизни')}</p>
+      <div class="cover-metrics">
+        <div><span>Период</span><b>{_safe_text(cover.get('period'))}</b></div>
+        <div><span>Место</span><b>{_safe_text(cover.get('place'))}</b></div>
+        <div><span>Общий балл</span><b>{_safe_score(cover.get('overall_score'))}/10</b></div>
+        <div><span>Топ-сфера</span><b>{_safe_text(cover.get('top_sphere'))}</b></div>
+      </div>
     </div>
+    <div class="cover-art">{f'<img src="{chart_image}" alt="" />' if chart_image else ''}</div>
   </div></section>
   <section class="structured-page sphere-grid-page">
     <div class="section-mark">Карта сфер года</div>
     <h2>Год в одном экране</h2>
     <div class="sphere-layout"><div class="radar-panel">{_radar_svg(cards)}</div><div class="score-list">{score_rows}</div></div>
+    <div class="map-summary">{_safe_text(report.get('map_summary'), 'Карта сфер показывает, где год даёт максимум движения, а где важнее действовать спокойнее. Самые высокие баллы формируют главный ресурс периода, низкие — зоны внимания и бережной настройки.')}</div>
   </section>
   <section class="structured-page">
     <div class="section-mark">Главная тема года</div>
     <div class="theme-card"><h2>{_safe_text(theme.get('title'))}</h2><p>{_safe_text(theme.get('text'))}</p><div class="theme-pills">{accents}</div></div>
+    <div class="additional-accents"><h3>Дополнительные акценты</h3><div class="additional-grid">{extra_accents}</div></div>
   </section>
   {category_pages}
   <section class="structured-page summary-page"><div class="section-mark">Сводка рисков</div><h2>Heatmap рисков</h2><div class="summary-grid">{risk_rows}</div></section>
