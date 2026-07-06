@@ -182,7 +182,10 @@ def _radar_svg(cards: list[dict]) -> str:
         axis.append(f'<line x1="{center:.2f}" y1="{center:.2f}" x2="{outer_x:.2f}" y2="{outer_y:.2f}" />')
         dots.append(f'<circle cx="{point_x:.2f}" cy="{point_y:.2f}" r="4" />')
         labels.append(
-            f'<text x="{label_x:.2f}" y="{label_y:.2f}" text-anchor="{anchor}" dominant-baseline="middle">{_safe(card.get("title"))}</text>'
+            f"""
+            <text class="radar-label-title" x="{label_x:.2f}" y="{label_y - 5:.2f}" text-anchor="{anchor}" dominant-baseline="middle">{_safe(card.get("title"))}</text>
+            <text class="radar-label-score" x="{label_x:.2f}" y="{label_y + 8:.2f}" text-anchor="{anchor}" dominant-baseline="middle">{_score(card.get("score"))}/10</text>
+            """
         )
         area_points.append(f"{point_x:.2f},{point_y:.2f}")
 
@@ -298,9 +301,7 @@ def _first_item(items) -> str:
 def _career_ladder(score: int) -> str:
     bars = "".join(
         f"""
-        <span class="{'active' if index < score else ''}">
-          <i>{index + 1}</i>
-        </span>
+        <span class="{'active' if index < score else ''}"></span>
         """
         for index in range(10)
     )
@@ -344,6 +345,7 @@ def _relationship_axis(score: int) -> str:
       <div class="axis">
         <div class="axis-line" style="--pos:{position}%"><span></span></div>
         <div class="axis-labels"><span>близость</span><span>свобода</span></div>
+        <p>Баланс близости и личного пространства</p>
       </div>
     </div>
     """
@@ -387,7 +389,12 @@ def _communication_bars(score: int) -> str:
         ("Поездки", max(1, score - 2)),
     ]
     content = "".join(
-        f"<div class=\"bar-row\"><b>{_safe(label)}</b><span><i style=\"--fill:{value * 10}%\"></i></span><em>{value * 10}%</em></div>"
+        f"""
+        <div class="bar-row">
+          <div><b>{_safe(label)}</b><em>{value * 10}%</em></div>
+          <span><i style="--fill:{value * 10}%"></i></span>
+        </div>
+        """
         for label, value in rows
     )
     return f"""
