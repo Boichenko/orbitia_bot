@@ -5,6 +5,8 @@ PDF (Helvetica и т.п.) кириллицу не поддерживают во�
 """
 
 import os
+import base64
+import math
 import re
 import xml.sax.saxutils as saxutils
 
@@ -42,6 +44,9 @@ _FONT_CANDIDATES = [
         ),
     ),
 ]
+
+_REPORT_DIR = os.path.dirname(os.path.dirname(__file__))
+_CHART_WHEEL_PATH = os.path.join(_REPORT_DIR, "assets", "chart-wheel.jpg")
 
 _KNOWN_SECTION_TITLES = [
     "ключевые данные",
@@ -355,67 +360,151 @@ def _markdown_to_html(markdown_text: str) -> str:
     return "\n".join(html_parts)
 
 
+def _asset_data_uri(path: str) -> str:
+    if not os.path.exists(path):
+        return ""
+    with open(path, "rb") as image:
+        encoded = base64.b64encode(image.read()).decode("ascii")
+    return f"data:image/jpeg;base64,{encoded}"
+
+
+def _radar_svg(cards: list[dict]) -> str:
+    items = cards[:6]
+    if len(items) < 3:
+        return ""
+
+    center = 150
+    max_radius = 104
+    points = []
+    labels = []
+    spokes = []
+    for index, card in enumerate(items):
+        angle = -math.pi / 2 + (2 * math.pi * index / len(items))
+        score = max(0, min(10, int(card.get("score", 0)))) / 10
+        x = center + math.cos(angle) * max_radius * score
+        y = center + math.sin(angle) * max_radius * score
+        lx = center + math.cos(angle) * 128
+        ly = center + math.sin(angle) * 128
+        sx = center + math.cos(angle) * max_radius
+        sy = center + math.sin(angle) * max_radius
+        points.append(f"{x:.1f},{y:.1f}")
+        spokes.append(f'<line x1="{center}" y1="{center}" x2="{sx:.1f}" y2="{sy:.1f}" />')
+        labels.append(
+            f'<text x="{lx:.1f}" y="{ly:.1f}" text-anchor="middle">'
+            f"{saxutils.escape(str(card.get('title', '')))[:18]}</text>"
+        )
+
+    rings = []
+    for radius in (35, 70, 104):
+        ring_points = []
+        for index in range(len(items)):
+            angle = -math.pi / 2 + (2 * math.pi * index / len(items))
+            ring_points.append(
+                f"{center + math.cos(angle) * radius:.1f},"
+                f"{center + math.sin(angle) * radius:.1f}"
+            )
+        rings.append(f'<polygon points="{" ".join(ring_points)}" />')
+
+    return f"""
+    <svg class="radar-svg" viewBox="0 0 300 300" role="img" aria-label="Карта сфер">
+      <g class="radar-grid">{"".join(rings)}{"".join(spokes)}</g>
+      <polygon class="radar-area" points="{" ".join(points)}" />
+      <polyline class="radar-line" points="{" ".join(points)} {points[0]}" />
+      <g class="radar-labels">{"".join(labels)}</g>
+    </svg>
+    """
+
+
 def _profile_html(profile: dict | None) -> str:
     if not profile:
         return ""
 
+    wheel_uri = _asset_data_uri(_CHART_WHEEL_PATH)
     meta = "\n".join(
         f"<div class=\"meta-item\"><span>{saxutils.escape(label)}</span><b>{saxutils.escape(value)}</b></div>"
         for label, value in profile.get("meta", [])
     )
+    cards_data = profile.get("cards", [])
     cards = "\n".join(
         f"""
-        <article class="metric-card">
-          <div class="donut" style="--score:{card['score']}; --color:{card['color']}">
-            <strong>{card['score']}</strong><span>из 10</span>
+        <article class="sphere-card" style="--sphere:{card['color']}">
+          <div class="score-ring" style="--score:{card['score']}">
+            <strong>{card['score']}</strong>
+            <span>из 10</span>
           </div>
-          <div>
+          <div class="sphere-copy">
             <h3>{saxutils.escape(card['title'])}</h3>
             <p>{saxutils.escape(card['note'])}</p>
           </div>
         </article>
         """
-        for card in profile.get("cards", [])
+        for card in cards_data
+    )
+    score_rows = "\n".join(
+        f"""
+        <div class="score-row" style="--sphere:{card['color']}">
+          <span>{saxutils.escape(card['title'])}</span>
+          <b>{card['score']}</b>
+        </div>
+        """
+        for card in cards_data[:7]
     )
     focus_items = "\n".join(
         f"<li>{saxutils.escape(item)}</li>" for item in profile.get("focus_items", [])[:4]
     )
+    wheel_image = (
+        f'<img class="wheel-image" src="{wheel_uri}" alt="Астрологическое колесо">'
+        if wheel_uri
+        else ""
+    )
 
     return f"""
-    <section class="visual-page">
-      <header class="hero">
+    <section class="pdf-page cover-page">
         <div class="stars"></div>
-        <div class="orb orb-a"></div>
-        <div class="orb orb-b"></div>
-        <div class="hero-content">
+        <div class="cover-glow"></div>
+        {wheel_image}
+        <div class="cover-copy">
           <div class="kicker">АСТРОЛОГИЧЕСКИЙ ОТЧЁТ</div>
           <h1>{saxutils.escape(profile['hero_title'])}</h1>
           <h2>{saxutils.escape(profile['hero_accent'])}</h2>
           <p>{saxutils.escape(profile['hero_description'])}</p>
           <div class="meta-row">{meta}</div>
         </div>
-      </header>
+      </section>
 
-      <section class="summary-head">
-        <div>
-          <div class="eyebrow">{saxutils.escape(profile['eyebrow'])}</div>
-          <h2>{saxutils.escape(profile['section_title'])}</h2>
-          <p>{saxutils.escape(profile['subtitle'])}</p>
+      <section class="pdf-page intro-page">
+        <div class="page-kicker">{saxutils.escape(profile['eyebrow'])}</div>
+        <div class="intro-head">
+          <div>
+            <h2>{saxutils.escape(profile['section_title'])}</h2>
+            <p>{saxutils.escape(profile['subtitle'])}</p>
+          </div>
+          <div class="summary-stats">
+            <div><span>СРЕДНИЙ БАЛЛ</span><strong>{profile['average']}</strong></div>
+            <div><span>ТОП СФЕРА</span><strong>{saxutils.escape(profile['top_label'])}</strong></div>
+          </div>
         </div>
-        <div class="summary-stats">
-          <div><span>СРЕДНИЙ БАЛЛ</span><strong>{profile['average']}</strong></div>
-          <div><span>ТОП СФЕРА</span><strong>{saxutils.escape(profile['top_label'])}</strong></div>
+        <div class="wheel-grid">
+          <div class="radar-panel">
+            {_radar_svg(cards_data)}
+          </div>
+          <div class="score-list">{score_rows}</div>
         </div>
       </section>
 
-      <section class="metric-grid">{cards}</section>
+      <section class="pdf-page cards-page">
+        <div class="page-kicker">СФЕРЫ И АКЦЕНТЫ</div>
+        <h2>Где будет больше всего движения</h2>
+        <div class="sphere-grid">{cards}</div>
+      </section>
 
-      <section class="focus-box">
+      <section class="pdf-page focus-page">
+        <div class="focus-panel">
         <div class="eyebrow">ПРАКТИЧЕСКИЙ ФОКУС</div>
         <h2>{saxutils.escape(profile['focus_title'])}</h2>
         <ul>{focus_items}</ul>
+        </div>
       </section>
-    </section>
     """
 
 
@@ -430,146 +519,303 @@ def _build_report_html(title: str, markdown_text: str, visual_profile: dict | No
     * {{ box-sizing: border-box; }}
     body {{
       margin: 0;
-      background: #ffffff;
-      color: #202033;
+      background: #080614;
+      color: #f8f1df;
       font-family: DejaVu Sans, Arial, sans-serif;
     }}
-    .visual-page {{
+    .pdf-page {{
       width: 210mm;
       height: 297mm;
-      padding: 10mm 13mm;
-      background: #fbf5e8;
+      padding: 18mm;
+      position: relative;
       page-break-after: always;
       overflow: hidden;
+      background:
+        radial-gradient(circle at 82% 14%, rgba(125, 56, 166, .32), transparent 34%),
+        radial-gradient(circle at 12% 78%, rgba(157, 63, 90, .24), transparent 42%),
+        linear-gradient(135deg, #070514 0%, #110b25 48%, #1b0d21 100%);
     }}
-    .hero {{
-      position: relative;
-      height: 69mm;
-      border-radius: 7mm;
-      overflow: hidden;
-      background: #08061c;
-      color: white;
-      padding: 13mm 17mm;
+    .cover-page {{
+      padding: 24mm 19mm;
     }}
-    .hero-content {{ position: relative; z-index: 2; max-width: 145mm; }}
-    .kicker, .eyebrow, .meta-item span, .summary-stats span {{
-      color: #6b6d84;
-      font-size: 8px;
-      font-weight: 700;
-      letter-spacing: 5px;
-    }}
-    .kicker {{ color: #ffc66d; letter-spacing: 3px; margin-bottom: 7mm; }}
-    .hero h1 {{ margin: 0; font-size: 31px; line-height: 1.02; }}
-    .hero h2 {{ margin: 2mm 0 5mm; color: #ffc66d; font-size: 25px; line-height: 1.04; }}
-    .hero p {{ margin: 0; max-width: 122mm; color: #d9d4e2; font-size: 10.5px; line-height: 1.35; }}
-    .meta-row {{ display: flex; gap: 18mm; margin-top: 3mm; }}
-    .meta-item b {{ display: block; margin-top: 2mm; color: white; font-size: 10px; }}
-    .orb {{ position: absolute; border-radius: 50%; opacity: .95; }}
-    .orb-a {{ width: 48mm; height: 48mm; right: 20mm; top: 3mm; background: #2a123f; }}
-    .orb-b {{ width: 39mm; height: 39mm; right: 14mm; top: 30mm; background: #642538; }}
     .stars {{
-      position: absolute; inset: 0;
+      position: absolute;
+      inset: 0;
+      opacity: .85;
       background-image:
-        radial-gradient(circle at 12% 70%, #fff 0 1px, transparent 1.5px),
-        radial-gradient(circle at 33% 22%, #fff 0 1px, transparent 1.5px),
-        radial-gradient(circle at 53% 61%, #fff 0 1px, transparent 1.5px),
-        radial-gradient(circle at 84% 15%, #fff 0 1px, transparent 1.5px),
-        radial-gradient(circle at 72% 44%, #fff 0 1px, transparent 1.5px);
+        radial-gradient(circle at 10% 20%, #fff 0 1px, transparent 1.5px),
+        radial-gradient(circle at 18% 62%, #fff 0 1px, transparent 1.5px),
+        radial-gradient(circle at 32% 30%, #fff 0 1px, transparent 1.5px),
+        radial-gradient(circle at 42% 72%, #fff 0 1px, transparent 1.5px),
+        radial-gradient(circle at 55% 18%, #fff 0 1px, transparent 1.5px),
+        radial-gradient(circle at 69% 54%, #fff 0 1px, transparent 1.5px),
+        radial-gradient(circle at 84% 22%, #fff 0 1px, transparent 1.5px),
+        radial-gradient(circle at 91% 76%, #fff 0 1px, transparent 1.5px);
     }}
-    .summary-head {{
-      display: grid;
-      grid-template-columns: 1fr auto;
-      gap: 10mm;
-      align-items: start;
-      padding: 8mm 10mm 4mm;
+    .cover-glow {{
+      position: absolute;
+      width: 118mm;
+      height: 118mm;
+      right: -25mm;
+      top: 33mm;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(255, 198, 109, .28), transparent 62%);
+      filter: blur(3px);
     }}
-    .summary-head h2 {{ margin: 3mm 0 3mm; font-size: 27px; line-height: 1.02; }}
-    .summary-head p {{ margin: 0; color: #606276; font-size: 11.5px; line-height: 1.25; }}
-    .summary-stats {{ display: flex; gap: 8mm; padding-top: 1mm; }}
-    .summary-stats strong {{ display: block; margin-top: 3mm; font-size: 16px; }}
-    .metric-grid {{
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 3.5mm;
-      padding: 0 10mm;
+    .wheel-image {{
+      position: absolute;
+      right: -8mm;
+      bottom: 10mm;
+      width: 118mm;
+      height: 118mm;
+      border-radius: 50%;
+      object-fit: cover;
+      opacity: .82;
+      mix-blend-mode: screen;
     }}
-    .metric-card {{
-      display: grid;
-      grid-template-columns: 30mm 1fr;
-      gap: 4mm;
-      align-items: center;
-      min-height: 23mm;
-      padding: 3.2mm;
-      border: 1px solid #dfd7c8;
-      border-radius: 6mm;
-      background: #fffdf8;
-      box-shadow: 0 5px 0 #ded7c8;
-      overflow: hidden;
+    .cover-copy {{
+      position: relative;
+      z-index: 2;
+      width: 128mm;
+      padding-top: 34mm;
     }}
-    .metric-card h3 {{ margin: 0 0 1.4mm; font-size: 13.5px; line-height: 1.05; }}
-    .metric-card p {{
+    .kicker, .page-kicker, .eyebrow, .meta-item span, .summary-stats span {{
+      color: #f3bd62;
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 4px;
+    }}
+    .cover-page h1 {{
+      margin: 9mm 0 2mm;
+      font-size: 52px;
+      line-height: .98;
+      letter-spacing: 0;
+    }}
+    .cover-page h2 {{
+      margin: 0 0 8mm;
+      color: #ffc66d;
+      font-size: 34px;
+      line-height: 1.05;
+    }}
+    .cover-page p {{
+      max-width: 116mm;
       margin: 0;
-      color: #5d6074;
-      font-size: 9.5px;
-      line-height: 1.28;
-      display: -webkit-box;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
+      color: #d8d1e6;
+      font-size: 13px;
+      line-height: 1.55;
     }}
-    .donut {{
-      width: 19mm;
-      height: 19mm;
+    .meta-row {{
+      display: grid;
+      grid-template-columns: repeat(3, max-content);
+      gap: 13mm;
+      margin-top: 18mm;
+    }}
+    .meta-item span, .summary-stats span, .eyebrow {{ color: #7f829f; }}
+    .meta-item b {{
+      display: block;
+      margin-top: 2mm;
+      color: #fff9ea;
+      font-size: 11px;
+    }}
+    .intro-head {{
+      display: grid;
+      grid-template-columns: 1fr 58mm;
+      gap: 12mm;
+      align-items: start;
+      margin-top: 8mm;
+    }}
+    .intro-head h2, .cards-page h2 {{
+      margin: 0 0 5mm;
+      color: #fff9ea;
+      font-size: 38px;
+      line-height: 1.04;
+    }}
+    .intro-head p {{
+      margin: 0;
+      color: #c9c0d4;
+      font-size: 14px;
+      line-height: 1.55;
+    }}
+    .summary-stats {{
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 5mm;
+    }}
+    .summary-stats strong {{
+      display: block;
+      margin-top: 3mm;
+      color: #fff9ea;
+      font-size: 21px;
+      line-height: 1.05;
+    }}
+    .wheel-grid {{
+      display: grid;
+      grid-template-columns: 105mm 1fr;
+      gap: 13mm;
+      margin-top: 18mm;
+      align-items: center;
+    }}
+    .radar-panel {{
+      min-height: 125mm;
+      border: 1px solid rgba(255, 231, 179, .2);
+      border-radius: 10mm;
+      background: rgba(255, 255, 255, .045);
+      box-shadow: inset 0 0 45px rgba(255, 198, 109, .08);
+      display: grid;
+      place-items: center;
+    }}
+    .radar-svg {{ width: 94mm; height: 94mm; overflow: visible; }}
+    .radar-grid polygon, .radar-grid line {{
+      fill: none;
+      stroke: rgba(255, 231, 179, .22);
+      stroke-width: 1;
+    }}
+    .radar-area {{
+      fill: rgba(255, 198, 109, .22);
+      stroke: none;
+    }}
+    .radar-line {{
+      fill: none;
+      stroke: #ffc66d;
+      stroke-width: 3;
+    }}
+    .radar-labels text {{
+      fill: #d6cce5;
+      font-size: 9px;
+      font-weight: 700;
+    }}
+    .score-list {{
+      display: grid;
+      gap: 4mm;
+    }}
+    .score-row {{
+      display: grid;
+      grid-template-columns: 1fr 12mm;
+      align-items: center;
+      gap: 5mm;
+      padding: 4mm 0;
+      border-bottom: 1px solid rgba(255, 231, 179, .16);
+      color: #e8e0ef;
+      font-size: 13px;
+    }}
+    .score-row::before {{
+      content: "";
+      width: 3mm;
+      height: 3mm;
+      border-radius: 50%;
+      background: var(--sphere);
+      box-shadow: 0 0 14px var(--sphere);
+      grid-column: 1;
+      grid-row: 1;
+    }}
+    .score-row span {{ padding-left: 7mm; grid-column: 1; grid-row: 1; }}
+    .score-row b {{ color: #fff9ea; font-size: 17px; }}
+    .sphere-grid {{
+      margin: 0;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 5mm;
+      margin-top: 10mm;
+    }}
+    .sphere-card {{
+      min-height: 40mm;
+      display: grid;
+      grid-template-columns: 28mm 1fr;
+      gap: 5mm;
+      align-items: center;
+      padding: 6mm;
+      border: 1px solid rgba(255, 231, 179, .18);
+      border-radius: 7mm;
+      background:
+        linear-gradient(135deg, rgba(255,255,255,.08), rgba(255,255,255,.035)),
+        radial-gradient(circle at 16% 24%, color-mix(in srgb, var(--sphere), transparent 75%), transparent 45%);
+    }}
+    .score-ring {{
+      width: 24mm;
+      height: 24mm;
       border-radius: 50%;
       display: grid;
       place-items: center;
       background:
-        radial-gradient(circle, #fffdf8 0 49%, transparent 50%),
-        conic-gradient(var(--color) calc(var(--score) * 10%), #f0ede5 0);
-      color: var(--color);
+        radial-gradient(circle, #0d0a1e 0 52%, transparent 53%),
+        conic-gradient(var(--sphere) calc(var(--score) * 10%), rgba(255,255,255,.13) 0);
+      color: var(--sphere);
+      box-shadow: 0 0 18px color-mix(in srgb, var(--sphere), transparent 55%);
     }}
-    .donut strong {{ font-size: 17px; line-height: 1; }}
-    .donut span {{ margin-top: -7mm; color: #5d6074; font-size: 7px; }}
-    .focus-box {{
-      margin: 8mm 10mm 0;
-      padding: 7mm 10mm;
-      border: 1px solid #dfd7c8;
-      border-radius: 8mm;
-      background: #fffdf8;
-      box-shadow: 0 5px 0 #ded7c8;
+    .score-ring strong {{ font-size: 24px; line-height: 1; }}
+    .score-ring span {{
+      margin-top: -9mm;
+      color: #ddd3e9;
+      font-size: 8px;
     }}
-    .focus-box h2 {{ margin: 3mm 0 5mm; font-size: 22px; line-height: 1.05; }}
-    .focus-box ul {{
+    .sphere-copy h3 {{
+      margin: 0 0 2mm;
+      color: #fff9ea;
+      font-size: 18px;
+      line-height: 1.08;
+    }}
+    .sphere-copy p {{
       margin: 0;
+      color: #c9c0d4;
+      font-size: 11.2px;
+      line-height: 1.38;
+    }}
+    .focus-page {{
+      display: grid;
+      place-items: center;
+    }}
+    .focus-panel {{
+      width: 172mm;
+      padding: 14mm;
+      border: 1px solid rgba(255, 231, 179, .2);
+      border-radius: 10mm;
+      background:
+        radial-gradient(circle at 100% 0%, rgba(125, 56, 166, .26), transparent 42%),
+        rgba(255, 255, 255, .06);
+    }}
+    .focus-panel h2 {{
+      margin: 6mm 0 10mm;
+      color: #fff9ea;
+      font-size: 34px;
+      line-height: 1.08;
+    }}
+    .focus-panel ul {{
       padding: 0;
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 3.5mm 8mm;
+      gap: 6mm 10mm;
       list-style: none;
     }}
-    .focus-box li {{
+    .focus-panel li {{
       position: relative;
-      padding-left: 7mm;
-      font-size: 9.5px;
-      line-height: 1.25;
+      padding: 5mm 5mm 5mm 11mm;
+      border-radius: 5mm;
+      background: rgba(255, 255, 255, .055);
+      color: #f4edfa;
+      font-size: 12px;
+      line-height: 1.45;
     }}
-    .focus-box li::before {{
+    .focus-panel li::before {{
       content: "";
       position: absolute;
-      left: 0;
-      top: 1.5mm;
-      width: 2mm;
-      height: 2mm;
+      left: 5mm;
+      top: 6mm;
+      width: 2.3mm;
+      height: 2.3mm;
       border-radius: 50%;
       background: #d5a600;
+      box-shadow: 0 0 10px #d5a600;
     }}
     .text-report {{
+      min-height: 297mm;
       padding: 18mm 20mm;
-      font-size: 12px;
+      background: #0a0718;
+      color: #f4edfa;
+      font-size: 12.5px;
       line-height: 1.55;
     }}
-    .text-report h1 {{ margin: 0 0 10mm; font-size: 28px; }}
-    .text-report h2 {{ margin: 8mm 0 3mm; font-size: 18px; }}
+    .text-report h1 {{ margin: 0 0 10mm; color: #ffc66d; font-size: 31px; }}
+    .text-report h2 {{ margin: 8mm 0 3mm; color: #fff9ea; font-size: 19px; }}
     .text-report p {{ margin: 0 0 3.5mm; }}
     .text-report li {{ margin-bottom: 2mm; }}
   </style>
