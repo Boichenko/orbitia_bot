@@ -2,7 +2,7 @@ import asyncio
 import os
 import re
 import time
-from datetime import datetime
+from datetime import date, datetime
 from typing import Optional
 
 from aiogram import F, Router
@@ -49,6 +49,43 @@ SOLAR_STARS_PRICE = int(os.getenv("SOLAR_STARS_PRICE", "100"))
 SYNASTRY_STARS_PRICE = int(os.getenv("SYNASTRY_STARS_PRICE", "300"))
 PAYMENTS_ENABLED = os.getenv("PAYMENTS_ENABLED", "false").strip().lower() == "true"
 REPORT_TYPES = {"solar", "synastry"}
+PROJECT_ROOT = os.path.dirname(os.path.dirname(__file__))
+PREVIEW_PATHS = {
+    "solar": [
+        (
+            os.path.join(PROJECT_ROOT, "assets", "previews", "solar_spheres.png"),
+            "Пример визуализации. В твоём отчёте значения будут рассчитаны персонально.",
+        ),
+        (
+            os.path.join(PROJECT_ROOT, "assets", "previews", "solar_focus.png"),
+            "Пример фрагмента. После оплаты бот сформирует твой индивидуальный текст.",
+        ),
+    ],
+    "synastry": [
+        (
+            os.path.join(PROJECT_ROOT, "assets", "previews", "synastry_wheel.png"),
+            "Пример визуализации. В твоей синастрии значения будут рассчитаны персонально.",
+        ),
+        (
+            os.path.join(PROJECT_ROOT, "assets", "previews", "synastry_recommendations.png"),
+            "Пример фрагмента. После оплаты бот сформирует индивидуальный разбор пары.",
+        ),
+    ],
+}
+MONTH_NAMES = {
+    1: "января",
+    2: "февраля",
+    3: "марта",
+    4: "апреля",
+    5: "мая",
+    6: "июня",
+    7: "июля",
+    8: "августа",
+    9: "сентября",
+    10: "октября",
+    11: "ноября",
+    12: "декабря",
+}
 
 
 def _log_report_event(user_id: int, data: dict, step: str) -> None:
@@ -713,35 +750,32 @@ async def process_confirm_go(callback: CallbackQuery, state: FSMContext):
     log_event(callback.from_user.id, "payment_started")
     log_event(callback.from_user.id, f"{report_type}_payment_started")
     try:
-        await callback.message.edit_text("Секунду, считаю короткий акцент по карте...")
-    except Exception:
-        pass
-    await asyncio.sleep(1.4)
-
-    try:
         pre_payment_pitch = _build_pre_payment_pitch(data, report_type)
     except Exception as e:
-        await callback.message.answer(f"Не удалось подготовить предрасчёт: {e}")
+        await callback.message.answer(f"Не удалось подготовить описание разбора: {e}")
         return
 
     try:
-        await callback.message.edit_text("Акцент найден. Перепроверяю формулировку...")
+        await callback.message.edit_text("Данные приняты. Показываю, что будет внутри отчёта...")
     except Exception:
         pass
-    await asyncio.sleep(0.8)
+    await asyncio.sleep(0.9)
 
     await callback.message.answer(pre_payment_pitch)
+    await _send_report_previews(callback.message, report_type)
 
     if report_type == "synastry":
         title = "Синастрия / совместимость"
         description = f"Разбор совместимости по двум натальным картам — {SYNASTRY_STARS_PRICE} ⭐"
         payload = "synastry_analysis"
         prices = [LabeledPrice(label="Синастрия", amount=SYNASTRY_STARS_PRICE)]
+        pay_button_text = f"Рассчитать синастрию — {SYNASTRY_STARS_PRICE} ⭐"
     else:
         title = "Разбор соляра на год"
         description = f"Полный астрологический разбор соляра — {SOLAR_STARS_PRICE} ⭐"
         payload = "solar_chart_analysis"
         prices = [LabeledPrice(label="Разбор соляра", amount=SOLAR_STARS_PRICE)]
+        pay_button_text = f"Рассчитать мой соляр — {SOLAR_STARS_PRICE} ⭐"
 
     await callback.message.answer_invoice(
         title=title,
@@ -750,25 +784,10 @@ async def process_confirm_go(callback: CallbackQuery, state: FSMContext):
         currency="XTR",
         prices=prices,
         provider_token="",
+        reply_markup=InlineKeyboardMarkup(
+            inline_keyboard=[[InlineKeyboardButton(text=pay_button_text, pay=True)]]
+        ),
     )
-
-
-HOUSE_ACCENTS = {
-    "1": "личность, внешний образ, самостоятельные решения и новый старт",
-    "2": "деньги, самоценность, ресурсы и ощущение опоры",
-    "3": "общение, обучение, документы, поездки и важные разговоры",
-    "4": "дом, семья, переезд, внутреннее состояние и личная база",
-    "5": "любовь, творчество, дети, удовольствие и желание проявляться",
-    "6": "работа, режим, здоровье, привычки и ежедневная нагрузка",
-    "7": "отношения, партнёрства, договорённости и важные союзы",
-    "8": "глубокие перемены, общие деньги, близость и психологическая честность",
-    "9": "расширение горизонтов, обучение, путешествия и новые смыслы",
-    "10": "карьера, статус, цели, признание и движение вверх",
-    "11": "друзья, команда, аудитория, планы на будущее и новые круги",
-    "12": "завершение старого, тишина, восстановление и скрытые процессы",
-}
-
-PERSONAL_PLANETS = {"Солнце", "Луна", "Меркурий", "Венера", "Марс"}
 
 
 def _build_pre_payment_pitch(data: dict, report_type: str) -> str:
@@ -777,164 +796,87 @@ def _build_pre_payment_pitch(data: dict, report_type: str) -> str:
     return _build_solar_pre_payment_pitch(data)
 
 
-def _table_row(table: list[list[str]], name: str) -> Optional[list[str]]:
-    for row in table[1:]:
-        if row and row[0] == name:
-            return row
-    return None
+def _format_russian_date(value: date) -> str:
+    return f"{value.day} {MONTH_NAMES[value.month]} {value.year}"
 
 
-def _top_house_from_planets(planets_table: list[list[str]]) -> Optional[str]:
-    counts: dict[str, int] = {}
-    for row in planets_table[1:]:
-        if len(row) < 3:
-            continue
-        counts[row[2]] = counts.get(row[2], 0) + 1
-    if not counts:
-        return None
-    return max(counts, key=counts.get)
+def _solar_period_text(data: dict) -> str:
+    day, month, _ = (int(x) for x in data["birth_date"].split("."))
+    cycle_year = int(data["solar_cycle_year"])
+    try:
+        start = date(cycle_year, month, day)
+    except ValueError:
+        start = date(cycle_year, 2, 28)
+    try:
+        end = date(cycle_year + 1, month, day)
+    except ValueError:
+        end = date(cycle_year + 1, 2, 28)
+    return f"от {_format_russian_date(start)} до {_format_russian_date(end)}"
 
 
-def _closest_aspect(aspects_table: list[list[str]], personal_only: bool = False) -> Optional[list[str]]:
-    rows = []
-    for row in aspects_table[1:]:
-        if len(row) < 4:
-            continue
-        if personal_only and row[0] not in PERSONAL_PLANETS and row[2] not in PERSONAL_PLANETS:
-            continue
+async def _send_report_previews(message: Message, report_type: str) -> None:
+    previews = [
+        (path, caption)
+        for path, caption in PREVIEW_PATHS.get(report_type, [])
+        if os.path.exists(path)
+    ]
+    if not previews:
+        return
+    await asyncio.sleep(0.5)
+    await message.answer("Ниже — пример, как выглядит готовый отчёт:")
+    for path, caption in previews:
         try:
-            orb = float(row[3])
-        except ValueError:
+            await message.answer_photo(FSInputFile(path), caption=caption)
+        except Exception:
             continue
-        rows.append((orb, row))
-    if not rows:
-        return None
-    return sorted(rows, key=lambda item: item[0])[0][1]
-
-
-def _aspect_phrase(row: list[str]) -> str:
-    return f"{row[0]} в аспекте «{row[1].lower()}» с {row[2].lower()} (орб {row[3]})"
 
 
 def _build_solar_pre_payment_pitch(data: dict) -> str:
-    birth_place = data["birth_place"]
-    solar_place = data["solar_place"]
-    cycle_year = data["solar_cycle_year"]
-    day, month, year = (int(x) for x in data["birth_date"].split("."))
-
-    birth_time = data.get("birth_time")
-    if birth_time:
-        hour, minute = (int(x) for x in birth_time.split(":"))
-    else:
-        hour, minute = 12, 0
-
-    birth_tz = get_timezone(birth_place["lat"], birth_place["lon"])
-    solar_tz = get_timezone(solar_place["lat"], solar_place["lon"])
-    chart_data = compute_solar_return(
-        birth_year=year,
-        birth_month=month,
-        birth_day=day,
-        birth_hour=hour,
-        birth_minute=minute,
-        birth_tz=birth_tz,
-        birth_lat=birth_place["lat"],
-        birth_lon=birth_place["lon"],
-        birth_place_label=birth_place["label"],
-        solar_lat=solar_place["lat"],
-        solar_lon=solar_place["lon"],
-        solar_place_label=solar_place["label"],
-        solar_tz=solar_tz,
-        solar_cycle_year=cycle_year,
-    )
-
-    name = data.get("person_name") or "тебя"
-    planets = chart_data.get("planets") or []
-    sun_row = _table_row(planets, "Солнце")
-    moon_row = _table_row(planets, "Луна")
-    sun_house = sun_row[2] if sun_row and len(sun_row) > 2 else None
-    moon_house = moon_row[2] if moon_row and len(moon_row) > 2 else None
-    top_house = _top_house_from_planets(planets)
-    focus_house = sun_house or top_house or moon_house
-    focus = HOUSE_ACCENTS.get(focus_house or "", "главные события, выборы и внутренние перемены")
-    closest = _closest_aspect(chart_data.get("aspects") or [])
-    aspect_text = ""
-    if closest:
-        aspect_text = (
-            f" Самый точный акцент в аспектах: {_aspect_phrase(closest)} — "
-            "это добавляет году сильную тему, которую стоит раскрыть в полном разборе."
-        )
-    if moon_house and moon_house != focus_house:
-        aspect_text += (
-            f" Луна дополнительно подсвечивает {HOUSE_ACCENTS.get(moon_house, moon_house + ' дом')}."
-        )
+    period = _solar_period_text(data)
 
     return (
-        f"🌞 Мы уже рассчитали соляр для {name} на {cycle_year}–{cycle_year + 1}.\n\n"
-        "Год выглядит насыщенным и полным событий: карта показывает, что основной акцент "
-        f"пойдёт через {focus}. Это не общий гороскоп — расчёт уже построен по твоей дате, "
-        f"времени и месту соляра.{aspect_text}\n\n"
-        f"Полная расшифровка покажет главную тему года, точки роста, зоны напряжения и "
-        f"практичный фокус по сферам жизни. Стоимость полного разбора — {SOLAR_STARS_PRICE} ⭐."
+        "Данные приняты.\n\n"
+        "По ним можно построить персональный соляр — карту твоего года "
+        f"{period}.\n\n"
+        "В полном разборе будет видно, какие сферы года окажутся самыми активными: "
+        "любовь, деньги, карьера, дом, здоровье, внутреннее состояние и личное развитие. "
+        "Отчёт покажет главную тему года, возможные точки роста, зоны напряжения и "
+        "практический фокус.\n\n"
+        "Ниже можно посмотреть пример, как выглядит готовый отчёт. "
+        "В твоём PDF все значения и трактовки будут рассчитаны индивидуально.\n\n"
+        f"Полный разбор стоит {SOLAR_STARS_PRICE} ⭐.\n\n"
+        "Внутри отчёта:\n"
+        "— главная тема года;\n"
+        "— карта сфер с баллами;\n"
+        "— разбор любви, денег, карьеры, семьи и здоровья;\n"
+        "— риски и возможности года;\n"
+        "— практический фокус;\n"
+        "— PDF-отчёт."
     )
 
 
 def _build_synastry_pre_payment_pitch(data: dict) -> str:
-    birth_place = data["birth_place"]
-    partner_birth_place = data["partner_birth_place"]
-    day, month, year = (int(x) for x in data["birth_date"].split("."))
-    p_day, p_month, p_year = (int(x) for x in data["partner_birth_date"].split("."))
-
-    birth_time = data.get("birth_time")
-    if birth_time:
-        hour, minute = (int(x) for x in birth_time.split(":"))
-    else:
-        hour, minute = 12, 0
-
-    partner_birth_time = data.get("partner_birth_time")
-    if partner_birth_time:
-        p_hour, p_minute = (int(x) for x in partner_birth_time.split(":"))
-    else:
-        p_hour, p_minute = 12, 0
-
-    chart_data = compute_synastry(
-        first_name=data.get("person_name", ""),
-        first_year=year,
-        first_month=month,
-        first_day=day,
-        first_hour=hour,
-        first_minute=minute,
-        first_tz=get_timezone(birth_place["lat"], birth_place["lon"]),
-        first_lat=birth_place["lat"],
-        first_lon=birth_place["lon"],
-        first_place_label=birth_place["label"],
-        partner_name=data.get("partner_name", ""),
-        partner_year=p_year,
-        partner_month=p_month,
-        partner_day=p_day,
-        partner_hour=p_hour,
-        partner_minute=p_minute,
-        partner_tz=get_timezone(partner_birth_place["lat"], partner_birth_place["lon"]),
-        partner_lat=partner_birth_place["lat"],
-        partner_lon=partner_birth_place["lon"],
-        partner_place_label=partner_birth_place["label"],
-    )
-
     first_name = data.get("person_name") or "ты"
     partner_name = data.get("partner_name") or "партнёр"
-    closest = _closest_aspect(chart_data.get("aspects") or [], personal_only=True)
-    aspect_text = ""
-    if closest:
-        aspect_text = (
-            f" Уже видно один из главных крючков связи: {_aspect_phrase(closest)}."
-        )
 
     return (
-        f"💞 Мы уже рассчитали синастрию для пары {first_name} + {partner_name}.\n\n"
-        "Связь выглядит неслучайной: в карте есть точки притяжения, эмоционального отклика "
-        f"и зоны, где вы можете сильно включать друг друга.{aspect_text} Это как раз тот случай, "
-        "где важно смотреть не только “подходим/не подходим”, а как именно работает динамика пары.\n\n"
-        "Полная расшифровка покажет химию, эмоциональную совместимость, риски, ресурсы и то, "
-        f"как вы влияете друг на друга. Стоимость полного разбора — {SYNASTRY_STARS_PRICE} ⭐."
+        "Данные приняты.\n\n"
+        f"По ним можно построить персональную синастрию пары {first_name} + {partner_name} — "
+        "разбор совместимости по двум натальным картам.\n\n"
+        "В полном разборе будет видно, какие сферы связи активированы сильнее всего: "
+        "эмоциональная близость, химия, коммуникация, быт, долгосрочность и зоны напряжения. "
+        "Отчёт показывает не просто “подходим или нет”, а как именно работает динамика пары: "
+        "где ресурс, где риск и на что опираться в отношениях.\n\n"
+        "Ниже можно посмотреть пример, как выглядит готовый отчёт. "
+        "В твоём PDF все значения и трактовки будут рассчитаны индивидуально.\n\n"
+        f"Полный разбор стоит {SYNASTRY_STARS_PRICE} ⭐.\n\n"
+        "Внутри отчёта:\n"
+        "— общая совместимость;\n"
+        "— колесо сфер отношений с баллами;\n"
+        "— разбор химии, эмоций, коммуникации и долгосрочности;\n"
+        "— главные ресурсы и риски пары;\n"
+        "— практические рекомендации;\n"
+        "— PDF-отчёт."
     )
 
 
