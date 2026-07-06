@@ -314,6 +314,7 @@ def _is_heading_line(line: str) -> bool:
 def _markdown_to_html(markdown_text: str) -> str:
     html_parts = []
     in_list = False
+    lines = markdown_text.split("\n")
 
     def close_list() -> None:
         nonlocal in_list
@@ -321,19 +322,68 @@ def _markdown_to_html(markdown_text: str) -> str:
             html_parts.append("</ul>")
             in_list = False
 
-    for raw_line in markdown_text.split("\n"):
+    def is_table_line(value: str) -> bool:
+        stripped = value.strip()
+        return stripped.count("|") >= 1 and not stripped.startswith("```")
+
+    def is_separator_line(value: str) -> bool:
+        cells = [cell.strip() for cell in value.strip().strip("|").split("|")]
+        return bool(cells) and all(re.match(r"^:?-{3,}:?$", cell or "") for cell in cells)
+
+    def table_html(table_lines: list[str]) -> str:
+        rows = []
+        for table_line in table_lines:
+            if is_separator_line(table_line):
+                continue
+            cells = [
+                _md_inline_to_reportlab(cell.strip())
+                for cell in table_line.strip().strip("|").split("|")
+            ]
+            rows.append(cells)
+        if not rows:
+            return ""
+
+        head = rows[0]
+        body_rows = rows[1:]
+        header = "".join(f"<th>{cell}</th>" for cell in head)
+        body = "\n".join(
+            "<tr>" + "".join(f"<td>{cell}</td>" for cell in row) + "</tr>"
+            for row in body_rows
+        )
+        return (
+            '<div class="table-wrap"><table class="report-table">'
+            f"<thead><tr>{header}</tr></thead><tbody>{body}</tbody>"
+            "</table></div>"
+        )
+
+    index = 0
+    while index < len(lines):
+        raw_line = lines[index]
         line = raw_line.rstrip()
         if not line.strip():
             close_list()
+            index += 1
             continue
         if re.match(r"^-{3,}\s*$", line.strip()):
             close_list()
+            index += 1
+            continue
+
+        if is_table_line(line):
+            close_list()
+            table_lines = [line]
+            index += 1
+            while index < len(lines) and is_table_line(lines[index]):
+                table_lines.append(lines[index].rstrip())
+                index += 1
+            html_parts.append(table_html(table_lines))
             continue
 
         if _is_heading_line(line):
             close_list()
             clean = _strip_heading_decoration(line)
             html_parts.append(f"<h2>{_md_inline_to_reportlab(clean)}</h2>")
+            index += 1
             continue
 
         bullet_match = re.match(r"^[-*]\s+(.*)", line)
@@ -342,6 +392,7 @@ def _markdown_to_html(markdown_text: str) -> str:
                 html_parts.append("<ul>")
                 in_list = True
             html_parts.append(f"<li>{_md_inline_to_reportlab(bullet_match.group(1))}</li>")
+            index += 1
             continue
 
         numbered_match = re.match(r"^(\d+[\.\)])\s+(.*)", line)
@@ -351,10 +402,12 @@ def _markdown_to_html(markdown_text: str) -> str:
                 f"<p><b>{saxutils.escape(numbered_match.group(1))}</b> "
                 f"{_md_inline_to_reportlab(numbered_match.group(2))}</p>"
             )
+            index += 1
             continue
 
         close_list()
         html_parts.append(f"<p>{_md_inline_to_reportlab(line)}</p>")
+        index += 1
 
     close_list()
     return "\n".join(html_parts)
@@ -1321,6 +1374,38 @@ def _build_report_html(title: str, markdown_text: str, visual_profile: dict | No
     .text-report h2 {{ margin: 8mm 0 3mm; color: #fff9ea; font-size: 19px; }}
     .text-report p {{ margin: 0 0 3.5mm; }}
     .text-report li {{ margin-bottom: 2mm; }}
+    .table-wrap {{
+      margin: 5mm 0 7mm;
+      overflow: hidden;
+      border: 1px solid rgba(255, 231, 179, .14);
+      border-radius: 4mm;
+      break-inside: avoid;
+    }}
+    .report-table {{
+      width: 100%;
+      border-collapse: collapse;
+      color: #f4edfa;
+      font-size: 10.5px;
+      line-height: 1.38;
+    }}
+    .report-table th {{
+      padding: 3.4mm 4mm;
+      background: rgba(216, 174, 85, .12);
+      color: #d8ae55;
+      font-size: 8.5px;
+      letter-spacing: 1.5px;
+      text-align: left;
+      text-transform: uppercase;
+    }}
+    .report-table td {{
+      padding: 3.2mm 4mm;
+      border-top: 1px solid rgba(255, 231, 179, .1);
+      color: rgba(244, 237, 250, .86);
+      vertical-align: top;
+    }}
+    .report-table tr:nth-child(even) td {{
+      background: rgba(255, 255, 255, .025);
+    }}
   </style>
 </head>
 <body>
