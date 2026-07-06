@@ -794,6 +794,7 @@ def _build_report_html(title: str, markdown_text: str, visual_profile: dict | No
       object-fit: cover;
       opacity: .82;
       mix-blend-mode: screen;
+      filter: sepia(1) saturate(.8) hue-rotate(350deg) brightness(.95);
     }}
     .cover-copy {{
       position: relative;
