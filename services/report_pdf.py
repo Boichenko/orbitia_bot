@@ -415,9 +415,231 @@ def _radar_svg(cards: list[dict]) -> str:
     """
 
 
+def _score_by_title(cards: list[dict], needle: str) -> int:
+    for card in cards:
+        if needle.lower() in str(card.get("title", "")).lower():
+            return int(card.get("score", 0))
+    return int(cards[0].get("score", 0)) if cards else 0
+
+
+def _relationship_type(average: float, top_label: str) -> str:
+    if average >= 8:
+        return "Глубокая, яркая, с сильным потенциалом роста"
+    if average >= 6:
+        return f"Живая и рабочая связь, где главный ключ - {top_label.lower()}"
+    return "Неровная, но важная связь, требующая зрелых договорённостей"
+
+
+def _synastry_label_case(label: str, grammatical_case: str) -> str:
+    forms = {
+        "Эмоциональная связь": {
+            "accusative": "эмоциональную связь",
+            "prepositional": "эмоциональной связи",
+        },
+        "Химия": {"accusative": "химию", "prepositional": "химии"},
+        "Коммуникация": {"accusative": "коммуникацию", "prepositional": "коммуникации"},
+        "Бытовая совместимость": {
+            "accusative": "бытовую совместимость",
+            "prepositional": "бытовой совместимости",
+        },
+        "Долгосрочность": {
+            "accusative": "долгосрочность",
+            "prepositional": "долгосрочности",
+        },
+        "Зоны напряжения": {
+            "accusative": "зоны напряжения",
+            "prepositional": "зонах напряжения",
+        },
+    }
+    return forms.get(label, {}).get(grammatical_case, label.lower())
+
+
+def _synastry_profile_html(profile: dict) -> str:
+    cards_data = profile.get("cards", [])
+    average = float(profile.get("average", 0))
+    top_label = str(profile.get("top_label", "связь"))
+    top_accusative = _synastry_label_case(top_label, "accusative")
+    top_prepositional = _synastry_label_case(top_label, "prepositional")
+    pair = next((value for label, value in profile.get("meta", []) if label == "ПАРА"), "")
+    chemistry = _score_by_title(cards_data, "Химия")
+    communication = _score_by_title(cards_data, "Коммуникация")
+    tension = _score_by_title(cards_data, "напряж")
+    long_term = _score_by_title(cards_data, "Долгосроч")
+    relationship_type = _relationship_type(average, top_label)
+    main_risk = "Разные языки любви и накопленное напряжение"
+    if communication <= 5:
+        main_risk = "Недосказанность, разные формулировки и обиды в диалоге"
+    elif tension >= 8:
+        main_risk = "Высокая интенсивность, ревность или борьба за контроль"
+
+    score_rows = "\n".join(
+        f"""
+        <div class="syn-score-row">
+          <span>{saxutils.escape(card['title'])}</span>
+          <b><em>{card['score']}</em>/10</b>
+        </div>
+        """
+        for card in cards_data
+    )
+    vector_tiles = "\n".join(
+        f"""
+        <div class="vector-tile">
+          <span>{saxutils.escape(card['title'])}</span>
+          <strong>{card['score']}/10</strong>
+        </div>
+        """
+        for card in cards_data[:5]
+    )
+    sphere_cards = "\n".join(
+        f"""
+        <article class="syn-detail-card" style="--sphere:{card['color']}">
+          <div class="syn-detail-score">{card['score']}</div>
+          <h3>{saxutils.escape(card['title'])}</h3>
+          <p>{saxutils.escape(card['note'])}</p>
+        </article>
+        """
+        for card in cards_data
+    )
+    resources = [
+        ("Физическая химия", "Сильное притяжение и энергия контакта" if chemistry >= 7 else "Притяжение включается через бережность и доверие"),
+        ("Долгосрочный фундамент", "Способность строить связь со временем" if long_term >= 7 else "Фундаменту нужны правила, ритм и ясные ожидания"),
+        (top_label, "Главный ресурс пары, на который можно опираться"),
+        ("Совместное развитие", "Отношения подсвечивают рост и новые решения"),
+        ("Честный разговор", "Прямота снижает напряжение быстрее, чем догадки"),
+        ("Ритуалы близости", "Регулярные маленькие действия держат тепло"),
+    ]
+    risks = [
+        ("Давление и критика", "высокий" if tension >= 8 else "средний"),
+        ("Разный язык любви", "высокий" if communication <= 5 else "средний"),
+        ("Ревность и контроль", "высокий" if tension >= 8 else "низкий"),
+        ("Неясность мотивов", "средний"),
+        ("Эмоциональное перенасыщение", "высокий" if average >= 8 else "средний"),
+        ("Конфликт свободы и стабильности", "средний"),
+    ]
+    recommendations = [
+        ("Если появляется критика", "Просить конкретику без оценки личности"),
+        ("Если копится обида", "Разделять факты, эмоции и ожидания"),
+        ("Если пропадает близость", "Обсудить ритм инициативы и поддержки"),
+        ("Если слишком много интенсивности", "Делать паузы и возвращаться к разговору позже"),
+        ("Если разные языки любви", "Проговаривать: для меня любовь - это..."),
+    ]
+    resource_cards = "\n".join(
+        f"""
+        <article class="mini-card">
+          <div class="eyebrow">РЕСУРС</div>
+          <h3>{saxutils.escape(title)}</h3>
+          <p>{saxutils.escape(text)}</p>
+        </article>
+        """
+        for title, text in resources
+    )
+    risk_cards = "\n".join(
+        f"""
+        <article class="risk-card">
+          <div><span class="eyebrow">РИСК</span><b>{saxutils.escape(level)}</b></div>
+          <h3>{saxutils.escape(title)}</h3>
+        </article>
+        """
+        for title, level in risks
+    )
+    recommendation_rows = "\n".join(
+        f"""
+        <div class="recommendation-row">
+          <span>{saxutils.escape(situation)}</span>
+          <b>{saxutils.escape(action)}</b>
+        </div>
+        """
+        for situation, action in recommendations
+    )
+
+    return f"""
+    <section class="pdf-page syn-page syn-cover">
+      <div class="syn-line"><span></span><b>Синастрия · Разбор пары</b></div>
+      <h1><em>Синастрия</em><br>{saxutils.escape(pair or profile['hero_title'])}</h1>
+      <p>{saxutils.escape(profile['hero_description'])}</p>
+      <div class="syn-hero-grid">
+        <div>
+          <span class="eyebrow">ОБЩАЯ СОВМЕСТИМОСТЬ</span>
+          <strong><em>{profile['average']}</em><small>/10</small></strong>
+        </div>
+        <div>
+          <span class="eyebrow">ТИП СВЯЗИ</span>
+          <b>{saxutils.escape(relationship_type)}</b>
+        </div>
+        <div>
+          <span class="eyebrow">ГЛАВНЫЙ РЕСУРС</span>
+          <b>{saxutils.escape(top_label)}</b>
+        </div>
+        <div>
+          <span class="eyebrow">ГЛАВНЫЙ РИСК</span>
+          <b>{saxutils.escape(main_risk)}</b>
+        </div>
+      </div>
+    </section>
+
+    <section class="pdf-page syn-page">
+      <div class="section-mark">— 02 · Быстрая карта отношений</div>
+      <div class="syn-surface syn-wheel-card">
+        <div>
+          <h2>Колесо совместимости</h2>
+          <p>Карта показывает, какие сферы отношений работают в паре сильнее. Чем ближе к краю - тем ярче проявлена сфера.</p>
+          <div class="syn-score-list">{score_rows}</div>
+        </div>
+        <div class="syn-radar">{_radar_svg(cards_data)}</div>
+      </div>
+    </section>
+
+    <section class="pdf-page syn-page">
+      <div class="section-mark">— 03 · Главная формула связи</div>
+      <div class="syn-surface formula-card">
+        <span class="eyebrow">ФОРМУЛА ПАРЫ</span>
+        <h2>Эта синастрия — про <em>{saxutils.escape(top_accusative)}</em>, притяжение и обучение через отношения.</h2>
+        <p>Потенциал пары раскрывается, когда вы говорите прямо, не копите напряжение и уважаете разные способы проявлять любовь.</p>
+        <div class="vector-grid">{vector_tiles}</div>
+      </div>
+    </section>
+
+    <section class="pdf-page syn-page">
+      <div class="section-mark">— 04 · Сферы отношений</div>
+      <div class="syn-detail-grid">{sphere_cards}</div>
+    </section>
+
+    <section class="pdf-page syn-page">
+      <div class="section-mark">— 05 · Главные ресурсы пары</div>
+      <div class="mini-grid">{resource_cards}</div>
+    </section>
+
+    <section class="pdf-page syn-page">
+      <div class="section-mark">— 06 · Главные риски пары</div>
+      <div class="risk-grid">{risk_cards}</div>
+    </section>
+
+    <section class="pdf-page syn-page">
+      <div class="section-mark">— 07 · Практические рекомендации</div>
+      <div class="syn-surface recommendation-card">
+        <h2>Что делать в конкретных ситуациях</h2>
+        <div class="recommendation-table">
+          <div class="recommendation-head"><span>Ситуация</span><span>Что делать</span></div>
+          {recommendation_rows}
+        </div>
+      </div>
+    </section>
+
+    <section class="pdf-page syn-page final-formula">
+      <div class="syn-surface">
+        <span class="eyebrow">ИТОГ РАЗБОРА</span>
+        <h2>Эта связь держится на <em>{saxutils.escape(top_prepositional)}</em> и становится сильнее через честный разговор.</h2>
+        <p>Главная активная сфера пары - {saxutils.escape(top_label.lower())}. Ключ пары - не избегать напряжения, а превращать его в понятные договорённости.</p>
+      </div>
+    </section>
+    """
+
+
 def _profile_html(profile: dict | None) -> str:
     if not profile:
         return ""
+    if profile.get("kind") == "synastry":
+        return _synastry_profile_html(profile)
 
     wheel_uri = _asset_data_uri(_CHART_WHEEL_PATH)
     meta = "\n".join(
@@ -805,6 +1027,286 @@ def _build_report_html(title: str, markdown_text: str, visual_profile: dict | No
       border-radius: 50%;
       background: #d5a600;
       box-shadow: 0 0 10px #d5a600;
+    }}
+    .syn-page {{
+      padding: 20mm;
+      background:
+        radial-gradient(circle at 82% 15%, rgba(110, 68, 145, .22), transparent 34%),
+        radial-gradient(circle at 18% 88%, rgba(108, 63, 86, .18), transparent 38%),
+        #090814;
+    }}
+    .syn-line {{
+      display: flex;
+      align-items: center;
+      gap: 4mm;
+      color: #f0c66a;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+    }}
+    .syn-line span {{
+      width: 12mm;
+      height: 1px;
+      background: #f0c66a;
+    }}
+    .syn-cover h1 {{
+      margin: 28mm 0 7mm;
+      color: #f7f0df;
+      font-size: 58px;
+      line-height: .98;
+      letter-spacing: 0;
+    }}
+    .syn-cover h1 em, .formula-card h2 em, .final-formula h2 em {{
+      color: #d8ae55;
+      font-style: italic;
+    }}
+    .syn-cover p {{
+      max-width: 132mm;
+      margin: 0;
+      color: rgba(247, 240, 223, .76);
+      font-size: 15px;
+      line-height: 1.55;
+    }}
+    .syn-hero-grid {{
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 13mm 18mm;
+      margin-top: 28mm;
+      max-width: 160mm;
+    }}
+    .syn-hero-grid strong {{
+      display: block;
+      margin-top: 2mm;
+      color: #f7f0df;
+      font-size: 38px;
+      line-height: 1;
+    }}
+    .syn-hero-grid strong em {{
+      color: #d8ae55;
+      font-style: normal;
+    }}
+    .syn-hero-grid small {{
+      color: rgba(247, 240, 223, .38);
+      font-size: 23px;
+    }}
+    .syn-hero-grid b {{
+      display: block;
+      margin-top: 2mm;
+      max-width: 70mm;
+      color: rgba(247, 240, 223, .88);
+      font-size: 15px;
+      line-height: 1.45;
+    }}
+    .section-mark {{
+      margin-bottom: 9mm;
+      color: #b2a784;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+    }}
+    .syn-surface {{
+      border: 1px solid rgba(255,255,255,.06);
+      border-radius: 8mm;
+      background:
+        radial-gradient(circle at 95% 10%, rgba(216, 174, 85, .08), transparent 40%),
+        rgba(255,255,255,.035);
+      box-shadow: 0 22px 60px rgba(0,0,0,.24);
+    }}
+    .syn-wheel-card {{
+      display: grid;
+      grid-template-columns: 72mm 1fr;
+      gap: 12mm;
+      align-items: center;
+      padding: 12mm;
+    }}
+    .syn-wheel-card h2, .formula-card h2, .recommendation-card h2, .final-formula h2 {{
+      margin: 0 0 4mm;
+      color: #f7f0df;
+      font-size: 34px;
+      line-height: 1.08;
+    }}
+    .syn-wheel-card p, .formula-card p, .final-formula p {{
+      margin: 0 0 6mm;
+      color: rgba(247, 240, 223, .68);
+      font-size: 12.5px;
+      line-height: 1.55;
+    }}
+    .syn-score-list {{
+      display: grid;
+      margin-top: 6mm;
+    }}
+    .syn-score-row {{
+      display: flex;
+      justify-content: space-between;
+      gap: 6mm;
+      padding: 3.5mm 0;
+      border-bottom: 1px solid rgba(255,255,255,.055);
+      color: rgba(247, 240, 223, .86);
+      font-size: 12px;
+    }}
+    .syn-score-row b {{
+      color: rgba(247, 240, 223, .56);
+      font-weight: 400;
+    }}
+    .syn-score-row em {{
+      color: #d8ae55;
+      font-style: normal;
+      font-weight: 700;
+    }}
+    .syn-radar .radar-svg {{
+      width: 88mm;
+      height: 88mm;
+    }}
+    .formula-card {{
+      padding: 14mm;
+    }}
+    .formula-card h2 {{
+      max-width: 142mm;
+      margin-top: 4mm;
+      font-size: 35px;
+    }}
+    .formula-card p {{
+      max-width: 140mm;
+      margin-top: 6mm;
+      font-size: 14px;
+    }}
+    .vector-grid {{
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 4mm;
+      margin-top: 12mm;
+    }}
+    .vector-tile {{
+      min-height: 28mm;
+      padding: 4mm;
+      border: 1px solid rgba(255,255,255,.055);
+      border-radius: 5mm;
+      background: rgba(255,255,255,.025);
+    }}
+    .vector-tile span {{
+      display: block;
+      color: #b2a784;
+      font-size: 9.5px;
+      line-height: 1.25;
+    }}
+    .vector-tile strong {{
+      display: block;
+      margin-top: 4mm;
+      color: #d8ae55;
+      font-size: 17px;
+    }}
+    .syn-detail-grid, .mini-grid, .risk-grid {{
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 5mm;
+    }}
+    .syn-detail-card, .mini-card, .risk-card {{
+      min-height: 38mm;
+      padding: 6mm;
+      border: 1px solid rgba(255,255,255,.06);
+      border-radius: 6mm;
+      background: rgba(255,255,255,.035);
+    }}
+    .syn-detail-card {{
+      position: relative;
+      overflow: hidden;
+    }}
+    .syn-detail-card::before {{
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at 10% 10%, color-mix(in srgb, var(--sphere), transparent 70%), transparent 38%);
+      opacity: .95;
+    }}
+    .syn-detail-card > * {{
+      position: relative;
+      z-index: 1;
+    }}
+    .syn-detail-score {{
+      color: var(--sphere);
+      font-size: 31px;
+      font-weight: 800;
+      line-height: 1;
+    }}
+    .syn-detail-card h3, .mini-card h3, .risk-card h3 {{
+      margin: 3mm 0 2mm;
+      color: #f7f0df;
+      font-size: 18px;
+      line-height: 1.12;
+    }}
+    .syn-detail-card p, .mini-card p {{
+      margin: 0;
+      color: rgba(247, 240, 223, .66);
+      font-size: 11.5px;
+      line-height: 1.4;
+    }}
+    .mini-grid, .risk-grid {{
+      grid-template-columns: repeat(3, 1fr);
+    }}
+    .mini-card {{
+      min-height: 42mm;
+    }}
+    .risk-card {{
+      min-height: 34mm;
+    }}
+    .risk-card div {{
+      display: flex;
+      justify-content: space-between;
+      gap: 4mm;
+      align-items: center;
+    }}
+    .risk-card b {{
+      border-radius: 999px;
+      padding: 1.4mm 2.6mm;
+      background: rgba(216, 174, 85, .16);
+      color: #d8ae55;
+      font-size: 9px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }}
+    .recommendation-card {{
+      padding: 11mm;
+    }}
+    .recommendation-table {{
+      margin-top: 8mm;
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,.06);
+      border-radius: 6mm;
+    }}
+    .recommendation-head, .recommendation-row {{
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8mm;
+      padding: 4mm 6mm;
+    }}
+    .recommendation-head {{
+      background: rgba(255,255,255,.035);
+      color: rgba(247, 240, 223, .5);
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }}
+    .recommendation-row {{
+      border-top: 1px solid rgba(255,255,255,.06);
+      color: rgba(247, 240, 223, .88);
+      font-size: 12px;
+      line-height: 1.35;
+    }}
+    .recommendation-row b {{
+      color: #d8ae55;
+      font-weight: 600;
+    }}
+    .final-formula {{
+      display: grid;
+      place-items: center;
+    }}
+    .final-formula .syn-surface {{
+      width: 160mm;
+      padding: 16mm;
+      text-align: center;
     }}
     .text-report {{
       min-height: 297mm;
