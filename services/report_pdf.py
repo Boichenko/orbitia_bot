@@ -1767,6 +1767,261 @@ async def structured_solar_to_pdf(report: dict, output_path: str) -> None:
     await _html_string_to_pdf(_structured_solar_html(report), output_path)
 
 
+def _synastry_map_cards(report: dict) -> list[dict]:
+    defaults = [
+        ("emotions", "Эмоции", 8),
+        ("chemistry", "Химия", 10),
+        ("communication", "Коммуникация", 5),
+        ("sex", "Секс", 8),
+        ("longterm", "Долгосрочность", 8),
+        ("home", "Быт", 7),
+        ("risks", "Риски", 7),
+    ]
+    source = report.get("relationship_map") or []
+    cards = []
+    for index, (key, title, score) in enumerate(defaults):
+        item = next((row for row in source if row.get("key") == key), {})
+        cards.append(
+            {
+                "title": item.get("title") or title,
+                "score": _safe_score(item.get("score"), score),
+                "note": item.get("meaning") or "",
+                "color": "#D6B56D" if index % 2 == 0 else "#7A5CFF",
+            }
+        )
+    return cards
+
+
+def _value_bar(label: str, value, class_name: str = "") -> str:
+    score = _safe_score(value)
+    return f"""
+    <div class="syn-value {class_name}">
+      <div><span>{_safe_text(label)}</span><b>{score}/10</b></div>
+      <i><em style="width:{score * 10}%"></em></i>
+    </div>
+    """
+
+
+def _syn_list(items, limit: int = 4) -> str:
+    if not isinstance(items, list):
+        return ""
+    return "".join(f"<li>{_safe_text(item)}</li>" for item in items[:limit])
+
+
+def _structured_synastry_html(report: dict) -> str:
+    cover = report.get("cover") or {}
+    formula = report.get("formula") or {}
+    emotions = report.get("emotions") or {}
+    chemistry = report.get("chemistry") or {}
+    love = report.get("love_languages") or {}
+    communication = report.get("communication") or {}
+    longterm = report.get("longterm") or {}
+    influence = report.get("influence") or {}
+    final = report.get("final") or {}
+    cards = _synastry_map_cards(report)
+    overall = _safe_score(cover.get("overall_score"), 8)
+
+    score_words = "".join(f"<span>{_safe_text(word)}</span>" for word in (cover.get("score_words") or [])[:3])
+    map_rows = "".join(
+        f"<div class='syn-map-row'><span>{_safe_text(card['title'])}</span><b>{_safe_score(card['score'])}</b></div>"
+        for card in cards
+    )
+    formula_bars = "".join(
+        _value_bar(item.get("label"), item.get("value"))
+        for item in (formula.get("indicators") or [])[:5]
+    )
+    emotion_scales = "".join(
+        f"""
+        <div class="emotion-col {'tension' if item.get('tone') == 'tension' else ''}">
+          <b>{_safe_score(item.get('value'))}</b>
+          <i><em style="height:{_safe_score(item.get('value')) * 10}%"></em></i>
+          <span>{_safe_text(item.get('label'))}</span>
+        </div>
+        """
+        for item in (emotions.get("scales") or [])[:5]
+    )
+    chemistry_params = "".join(
+        _value_bar(item.get("label"), item.get("value"))
+        for item in (chemistry.get("parameters") or [])[:4]
+    )
+    chem_score = _safe_score(chemistry.get("score"), 10)
+    chem_fill = max(12, min(96, chem_score * 10))
+    first_love = love.get("first") or {}
+    partner_love = love.get("partner") or {}
+    translator_rows = "".join(
+        f"<div class='translator-row'><b>{_safe_text(item.get('from'))}</b><i></i><span>{_safe_text(item.get('to'))}</span></div>"
+        for item in (communication.get("rows") or [])[:4]
+    )
+    trigger_cards = "".join(
+        f"""
+        <article class="trigger-card">
+          <div><h3>{_safe_text(item.get('title'))}</h3><span>{''.join('<i></i>' for _ in range(_safe_score(item.get('level'), 3) if _safe_score(item.get('level'), 3) <= 5 else 5))}</span></div>
+          <p>{_safe_text(item.get('manifestation'))}</p>
+          <b>{_safe_text(item.get('action'))}</b>
+        </article>
+        """
+        for item in (report.get("triggers") or [])[:5]
+    )
+    pillars = "".join(
+        f"<div class='pillar'><span>{_safe_text(item.get('label'))}</span><b>{_safe_score(item.get('value'))}</b></div>"
+        for item in (longterm.get("pillars") or [])[:4]
+    )
+    first_influence = influence.get("first_to_partner") or {}
+    partner_influence = influence.get("partner_to_first") or {}
+    resource_cards = "".join(
+        f"<article><i></i><h3>{_safe_text(item.get('title'))}</h3><p>{_safe_text(item.get('text'))}</p></article>"
+        for item in (report.get("resources") or [])[:6]
+    )
+
+    def risk_level(level) -> int:
+        text = str(level or "").lower()
+        if "выс" in text:
+            return 9
+        if "сред" in text:
+            return 6
+        return _safe_score(level, 5)
+
+    risk_cards = "".join(
+        f"<article class='syn-risk' style='--level:{risk_level(item.get('level')) * 10}%'><b>{_safe_text(item.get('title'))}</b><span>{_safe_text(item.get('level'))}</span><p>{_safe_text(item.get('text'))}</p></article>"
+        for item in (report.get("risks") or [])[:6]
+    )
+    recs = "".join(
+        f"<div class='rec-row'><b>{index}</b><div><h3>{_safe_text(item.get('situation'))}</h3><p>{_safe_text(item.get('action'))}</p></div></div>"
+        for index, item in enumerate((report.get("recommendations") or [])[:5], 1)
+    )
+
+    return f"""<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <style>
+    @page {{ size:A4; margin:0; }}
+    * {{ box-sizing:border-box; }}
+    body {{ margin:0; background:#171225; color:rgba(255,255,255,.86); font-family:Manrope, DejaVu Sans, Arial, sans-serif; }}
+    h1,h2,h3 {{ font-family:Cormorant Garamond, Georgia, serif; letter-spacing:0; }}
+    .syn-page {{ width:210mm; height:297mm; overflow:hidden; padding:18mm; page-break-after:always; background:radial-gradient(circle at 84% 12%, rgba(122,92,255,.22), transparent 34%), #171225; }}
+    .mark {{ color:#D6B56D; font-size:9px; font-weight:800; letter-spacing:4px; text-transform:uppercase; }}
+    .syn-cover {{ display:grid; grid-template-columns:1.35fr .85fr; gap:12mm; height:100%; align-items:center; border-left:1.5mm solid #D6B56D; padding-left:13mm; }}
+    .syn-cover h1 {{ margin:6mm 0; font-size:52px; line-height:1; color:#fff9ea; }}
+    .syn-cover p {{ max-width:112mm; color:rgba(255,255,255,.62); font-size:14px; line-height:1.55; }}
+    .cover-metric-grid {{ display:grid; grid-template-columns:1fr 1fr; gap:4mm; margin-top:12mm; }}
+    .cover-metric-grid div,.score-card,.syn-surface {{ border:1px solid rgba(255,255,255,.08); border-radius:8mm; background:rgba(255,255,255,.035); }}
+    .cover-metric-grid div {{ min-height:24mm; padding:5mm; }}
+    .cover-metric-grid span {{ display:block; color:rgba(255,255,255,.46); font-size:8px; letter-spacing:1.6px; text-transform:uppercase; }}
+    .cover-metric-grid b {{ display:block; margin-top:2mm; color:#D6B56D; font-size:12px; line-height:1.28; }}
+    .score-card {{ padding:12mm; text-align:center; }}
+    .score-orb {{ width:48mm; height:48mm; margin:0 auto 7mm; border-radius:50%; display:grid; place-items:center; border:1.8mm solid #D6B56D; box-shadow:0 0 26px rgba(122,92,255,.25); }}
+    .score-orb b {{ color:#D6B56D; font-size:34px; }}
+    .score-words {{ display:flex; flex-wrap:wrap; justify-content:center; gap:2mm; }}
+    .score-words span,.formula-strip span {{ border:1px solid rgba(214,181,109,.28); border-radius:999px; padding:1.6mm 3mm; color:#D6B56D; font-size:9px; }}
+    .syn-title h2 {{ margin:3mm 0 0; color:#fff9ea; font-size:38px; line-height:1.05; }}
+    .map-layout {{ display:grid; grid-template-columns:112mm 1fr; gap:12mm; align-items:center; margin-top:16mm; }}
+    .radar-panel {{ min-height:122mm; border:1px solid rgba(255,255,255,.08); border-radius:8mm; background:rgba(255,255,255,.035); display:grid; place-items:center; }}
+    .radar-svg {{ width:94mm; height:94mm; overflow:visible; }}
+    .radar-grid polygon,.radar-grid line {{ fill:none; stroke:rgba(255,255,255,.08); stroke-width:1; }}
+    .radar-area {{ fill:rgba(122,92,255,.22); }}
+    .radar-line {{ fill:none; stroke:#D6B56D; stroke-width:3; }}
+    .radar-dots circle {{ fill:#D6B56D; stroke:#171225; stroke-width:2; }}
+    .radar-labels text {{ fill:rgba(255,255,255,.82); font-size:8px; font-weight:700; }}
+    .syn-map-row {{ display:flex; justify-content:space-between; gap:4mm; padding:3.5mm 0; border-bottom:1px solid rgba(255,255,255,.08); color:rgba(255,255,255,.72); }}
+    .syn-map-row b {{ color:#D6B56D; }}
+    .formula-card {{ margin-top:14mm; padding:12mm; }}
+    .formula-card h2 {{ margin:0 0 5mm; font-size:36px; color:#fff9ea; }}
+    .formula-card .phrase {{ color:#D6B56D; font-size:19px; line-height:1.35; }}
+    .formula-card p,.section-copy {{ color:rgba(255,255,255,.64); font-size:12px; line-height:1.45; }}
+    .formula-strip {{ display:grid; grid-template-columns:repeat(5,1fr); gap:3mm; margin-top:8mm; }}
+    .syn-value {{ display:grid; gap:1.8mm; }}
+    .syn-value div {{ display:flex; justify-content:space-between; gap:2mm; color:rgba(255,255,255,.76); font-size:10px; }}
+    .syn-value b {{ color:#D6B56D; }}
+    .syn-value i {{ height:1.8mm; border-radius:99px; background:rgba(255,255,255,.08); overflow:hidden; }}
+    .syn-value em {{ display:block; height:100%; border-radius:99px; background:#D6B56D; }}
+    .two-col {{ display:grid; grid-template-columns:82mm 1fr; gap:10mm; margin-top:12mm; align-items:start; }}
+    .emotion-panel,.chem-battery,.love-bridge,.translator,.foundation-card,.influence-card {{ min-height:72mm; padding:8mm; border:1px solid rgba(255,255,255,.08); border-radius:8mm; background:rgba(255,255,255,.035); }}
+    .emotion-panel {{ display:flex; align-items:end; justify-content:space-between; gap:3mm; }}
+    .emotion-col {{ display:grid; justify-items:center; gap:2mm; width:100%; }}
+    .emotion-col b {{ color:#D6B56D; }}
+    .emotion-col i {{ width:8mm; height:46mm; display:flex; align-items:end; border-radius:99px; background:rgba(255,255,255,.08); overflow:hidden; }}
+    .emotion-col em {{ display:block; width:100%; background:#D6B56D; border-radius:99px; }}
+    .emotion-col.tension em {{ background:#7A5CFF; }}
+    .emotion-col span {{ text-align:center; color:rgba(255,255,255,.62); font-size:8.5px; }}
+    .copy-grid {{ display:grid; grid-template-columns:1fr 1fr; gap:5mm; }}
+    .copy-grid h3 {{ margin:0 0 2mm; color:#fff9ea; font-size:16px; }}
+    .copy-grid ul {{ margin:0; padding-left:4mm; color:rgba(255,255,255,.62); font-size:10px; line-height:1.35; }}
+    .battery-shell {{ height:28mm; border:2px solid rgba(214,181,109,.56); border-radius:5mm; padding:2mm; position:relative; margin:6mm 0; }}
+    .battery-shell:after {{ content:""; position:absolute; right:-5mm; top:8mm; width:4mm; height:12mm; border-radius:0 2mm 2mm 0; background:rgba(214,181,109,.48); }}
+    .battery-fill {{ height:100%; width:var(--fill); border-radius:3mm; display:grid; place-items:center; background:linear-gradient(90deg, rgba(122,92,255,.82), rgba(214,181,109,.88)); color:#171225; font-weight:800; font-size:12px; }}
+    .love-bridge {{ display:grid; grid-template-columns:1fr 22mm 1fr; align-items:center; gap:4mm; }}
+    .love-side {{ border:1px solid rgba(214,181,109,.18); border-radius:6mm; padding:6mm; }}
+    .love-side h3 {{ margin:0 0 3mm; color:#D6B56D; font-size:19px; }}
+    .love-side span {{ display:block; padding:2mm 0; border-top:1px solid rgba(255,255,255,.08); color:rgba(255,255,255,.72); font-size:11px; }}
+    .bridge {{ text-align:center; color:#D6B56D; font-size:9px; line-height:1.25; }}
+    .bridge:before,.bridge:after {{ content:""; display:block; height:1px; background:rgba(214,181,109,.45); margin:3mm 0; }}
+    .translator {{ display:grid; gap:3mm; }}
+    .translator-row {{ display:grid; grid-template-columns:1fr 12mm 1fr; gap:3mm; align-items:center; padding:3mm; border-radius:4mm; background:rgba(255,255,255,.035); }}
+    .translator-row b,.translator-row span {{ color:rgba(255,255,255,.78); font-size:11px; }}
+    .translator-row i {{ height:1px; background:#D6B56D; position:relative; }}
+    .translator-row i:after {{ content:""; position:absolute; right:0; top:-2px; width:5px; height:5px; border-top:1px solid #D6B56D; border-right:1px solid #D6B56D; transform:rotate(45deg); }}
+    .trigger-grid,.resource-grid,.risk-grid {{ display:grid; grid-template-columns:repeat(2,1fr); gap:5mm; margin-top:10mm; }}
+    .trigger-card,.resource-grid article,.syn-risk,.rec-row {{ border:1px solid rgba(255,255,255,.08); border-radius:6mm; background:rgba(255,255,255,.035); padding:5mm; }}
+    .trigger-card div {{ display:flex; justify-content:space-between; gap:4mm; }}
+    .trigger-card h3,.resource-grid h3,.rec-row h3 {{ margin:0 0 2mm; color:#fff9ea; font-size:17px; line-height:1.1; }}
+    .trigger-card span {{ display:flex; gap:1mm; }}
+    .trigger-card span i {{ width:2mm; height:2mm; border-radius:50%; background:#7A5CFF; }}
+    .trigger-card p,.resource-grid p,.syn-risk p,.rec-row p {{ color:rgba(255,255,255,.62); font-size:10.5px; line-height:1.35; }}
+    .trigger-card b {{ color:#D6B56D; font-size:10px; line-height:1.3; }}
+    .foundation-card {{ display:grid; align-content:end; gap:4mm; }}
+    .pillar-row {{ display:grid; grid-template-columns:repeat(4,1fr); gap:3mm; align-items:end; }}
+    .pillar {{ min-height:32mm; display:flex; flex-direction:column; justify-content:space-between; padding:4mm 2mm; text-align:center; border:1px solid rgba(214,181,109,.2); border-radius:4mm; background:rgba(122,92,255,.14); }}
+    .pillar b {{ color:#D6B56D; font-size:19px; }}
+    .foundation-base {{ padding:5mm; text-align:center; color:#D6B56D; border:1px solid rgba(214,181,109,.35); border-radius:4mm; background:rgba(214,181,109,.12); font-weight:800; }}
+    .weak-note {{ color:rgba(255,255,255,.62); font-size:11px; }}
+    .influence-card {{ display:grid; grid-template-columns:1fr 16mm 1fr; gap:4mm; align-items:center; }}
+    .influence-card h3 {{ margin:0 0 3mm; color:#D6B56D; font-size:17px; }}
+    .influence-card ul {{ margin:0; padding-left:4mm; color:rgba(255,255,255,.68); font-size:10.5px; line-height:1.45; }}
+    .arrows {{ display:grid; gap:5mm; color:#D6B56D; text-align:center; font-size:18px; }}
+    .resource-grid article i {{ width:3mm; height:3mm; display:block; border-radius:50%; background:#D6B56D; margin-bottom:3mm; }}
+    .syn-risk {{ background:linear-gradient(90deg, rgba(122,92,255,.28), rgba(255,255,255,.035) var(--level)); min-height:30mm; }}
+    .syn-risk b {{ color:#D6B56D; display:block; margin-bottom:1mm; }}
+    .syn-risk span {{ color:rgba(255,255,255,.46); font-size:9px; text-transform:uppercase; letter-spacing:1.4px; }}
+    .rec-list {{ display:grid; gap:4mm; margin-top:10mm; }}
+    .rec-row {{ display:grid; grid-template-columns:12mm 1fr; gap:5mm; align-items:center; }}
+    .rec-row > b {{ width:10mm; height:10mm; display:grid; place-items:center; border-radius:50%; background:#D6B56D; color:#171225; }}
+    .final-card {{ margin:22mm auto 0; max-width:158mm; padding:14mm; text-align:center; border:1px solid rgba(214,181,109,.42); border-radius:8mm; background:rgba(255,255,255,.035); }}
+    .final-card h2 {{ margin:0 0 5mm; color:#fff9ea; font-size:38px; }}
+    .final-card p {{ color:rgba(255,255,255,.66); line-height:1.55; }}
+    .final-mini {{ display:grid; grid-template-columns:repeat(3,1fr); gap:4mm; margin-top:8mm; text-align:left; }}
+    .final-mini div {{ border-top:1px solid rgba(214,181,109,.28); padding-top:3mm; }}
+    .final-mini b {{ color:#D6B56D; font-size:10px; text-transform:uppercase; letter-spacing:1.5px; }}
+    .final-mini span {{ display:block; margin-top:2mm; color:rgba(255,255,255,.7); font-size:11px; line-height:1.35; }}
+  </style>
+</head>
+<body>
+  <section class="syn-page"><div class="syn-cover">
+    <div><div class="mark">Синастрия · Разбор пары</div><h1>{_safe_text(cover.get('title'), 'Синастрия')}</h1><p>{_safe_text(cover.get('subtitle'))}</p>
+    <div class="cover-metric-grid"><div><span>Тип связи</span><b>{_safe_text(cover.get('connection_type'))}</b></div><div><span>Главный ресурс</span><b>{_safe_text(cover.get('main_resource'))}</b></div><div><span>Главный риск</span><b>{_safe_text(cover.get('main_risk'))}</b></div><div><span>Совместимость</span><b>{overall}/10</b></div></div></div>
+    <div class="score-card"><div class="score-orb"><b>{overall}/10</b></div><div class="score-words">{score_words}</div></div>
+  </div></section>
+  <section class="syn-page"><div class="syn-title"><div class="mark">Быстрая карта отношений</div><h2>Колесо совместимости</h2></div><div class="map-layout"><div class="radar-panel">{_radar_svg(cards)}</div><div>{map_rows}</div></div></section>
+  <section class="syn-page"><div class="formula-card syn-surface"><div class="mark">{_safe_text(formula.get('title'), 'Формула пары')}</div><h2>{_safe_text(formula.get('phrase'))}</h2><p>{_safe_text(formula.get('text'))}</p><div class="formula-strip">{formula_bars}</div></div></section>
+  <section class="syn-page"><div class="syn-title"><div class="mark">Эмоциональная совместимость</div><h2>Эмоциональная панель</h2></div><div class="two-col"><div class="emotion-panel">{emotion_scales}</div><div><p class="section-copy">{_safe_text(emotions.get('summary'))}</p><div class="copy-grid"><div><h3>Где есть поддержка</h3><ul>{_syn_list(emotions.get('support'), 3)}</ul></div><div><h3>Где несовпадение</h3><ul>{_syn_list(emotions.get('mismatch'), 3)}</ul></div></div></div></div></section>
+  <section class="syn-page"><div class="syn-title"><div class="mark">Химия, секс и притяжение</div><h2>Chemistry battery</h2></div><div class="two-col"><div class="chem-battery"><b>{chem_score}/10</b><div class="battery-shell" style="--fill:{chem_fill}%"><div class="battery-fill">{_safe_text(chemistry.get('label'), 'Сильное притяжение')}</div></div>{chemistry_params}</div><div><p class="section-copy">{_safe_text(chemistry.get('summary'))}</p><div class="copy-grid"><div><h3>Что усиливает</h3><ul>{_syn_list(chemistry.get('amplifies'), 3)}</ul></div><div><h3>Что гасит желание</h3><ul>{_syn_list(chemistry.get('dims'), 3)}</ul></div></div></div></div></section>
+  <section class="syn-page"><div class="syn-title"><div class="mark">Любовь и языки привязанности</div><h2>Два языка любви</h2></div><div class="love-bridge" style="margin-top:14mm"><div class="love-side"><h3>{_safe_text(first_love.get('name'))}</h3>{''.join(f'<span>{_safe_text(item)}</span>' for item in (first_love.get('items') or [])[:4])}</div><div class="bridge">{_safe_text(love.get('bridge'), 'переводить ожидания в слова')}</div><div class="love-side"><h3>{_safe_text(partner_love.get('name'))}</h3>{''.join(f'<span>{_safe_text(item)}</span>' for item in (partner_love.get('items') or [])[:4])}</div></div><p class="section-copy">{_safe_text(love.get('summary'))}</p></section>
+  <section class="syn-page"><div class="syn-title"><div class="mark">Коммуникация и понимание</div><h2>Переводчик</h2></div><p class="section-copy">{_safe_text(communication.get('summary'))}</p><div class="translator" style="margin-top:10mm">{translator_rows}</div></section>
+  <section class="syn-page"><div class="syn-title"><div class="mark">Конфликты и триггеры</div><h2>Карта триггеров</h2></div><div class="trigger-grid">{trigger_cards}</div></section>
+  <section class="syn-page"><div class="syn-title"><div class="mark">Долгосрочный потенциал</div><h2>Фундамент отношений</h2></div><div class="two-col"><div class="foundation-card"><div class="pillar-row">{pillars}</div><div class="foundation-base">Готовность строить</div></div><div><p class="section-copy">{_safe_text(longterm.get('summary'))}</p><p class="weak-note">Слабое место: {_safe_text(longterm.get('weak_spot'))}</p></div></div></section>
+  <section class="syn-page"><div class="syn-title"><div class="mark">Влияние друг на друга</div><h2>Два направления влияния</h2></div><div class="influence-card" style="margin-top:12mm"><div><h3>{_safe_text(first_influence.get('title'))}</h3><ul>{_syn_list(first_influence.get('items'), 4)}</ul></div><div class="arrows"><span>→</span><span>←</span></div><div><h3>{_safe_text(partner_influence.get('title'))}</h3><ul>{_syn_list(partner_influence.get('items'), 4)}</ul></div></div></section>
+  <section class="syn-page"><div class="syn-title"><div class="mark">Главные ресурсы пары</div><h2>Ресурсная карта</h2></div><div class="resource-grid">{resource_cards}</div></section>
+  <section class="syn-page"><div class="syn-title"><div class="mark">Главные риски пары</div><h2>Risk heatmap</h2></div><div class="risk-grid">{risk_cards}</div></section>
+  <section class="syn-page"><div class="syn-title"><div class="mark">Практические рекомендации</div><h2>Что делать, если...</h2></div><div class="rec-list">{recs}</div></section>
+  <section class="syn-page"><div class="final-card"><div class="mark">{_safe_text(final.get('title'), 'Итоговая формула')}</div><h2>{_safe_text(final.get('text'))}</h2><div class="final-mini"><div><b>Что держит</b><span>{_safe_text(final.get('keeps'))}</span></div><div><b>Что ломает</b><span>{_safe_text(final.get('breaks'))}</span></div><div><b>Что растит</b><span>{_safe_text(final.get('growth'))}</span></div></div></div></section>
+</body>
+</html>"""
+
+
+async def structured_synastry_to_pdf(report: dict, output_path: str) -> None:
+    await _html_string_to_pdf(_structured_synastry_html(report), output_path)
+
+
 async def _html_string_to_pdf(html: str, output_path: str) -> None:
     from playwright.async_api import async_playwright
 

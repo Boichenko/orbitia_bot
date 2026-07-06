@@ -26,13 +26,13 @@ from services.geocoding import search_city
 from services.prompt_builder import (
     build_solar_json_prompt,
     build_solar_prompt,
+    build_synastry_json_prompt,
     build_synastry_prompt,
-    build_synastry_review_prompt,
 )
 from services.report_file import extract_main_theme
 from services.report_json import parse_report_json, structured_report_to_teaser
 from services.report_insights import build_solar_profile, build_synastry_profile
-from services.report_pdf import markdown_to_pdf, structured_solar_to_pdf
+from services.report_pdf import markdown_to_pdf, structured_solar_to_pdf, structured_synastry_to_pdf
 from services.solar_chart import compute_solar_return
 from services.synastry_chart import compute_synastry
 from services.timezone_lookup import get_timezone
@@ -1206,8 +1206,9 @@ async def _run_synastry_analysis(answer_target, from_user: User, state: FSMConte
 
     first_name = data.get("person_name", "")
     partner_name = data.get("partner_name", "")
-    prompt = build_synastry_prompt(chart_data, first_name=first_name, partner_name=partner_name)
+    prompt = build_synastry_json_prompt(chart_data, first_name=first_name, partner_name=partner_name)
 
+    report_json = None
     try:
         buffer, stop_reason = await interpret_solar_chart(prompt)
     except Exception as e:
@@ -1215,36 +1216,47 @@ async def _run_synastry_analysis(answer_target, from_user: User, state: FSMConte
         await state.clear()
         return
 
-    cut_off_note = ""
-    if stop_reason == "max_tokens":
-        cut_off_note = "\n\n⚠️ Черновик получился длиннее лимита и обрезался."
-
     try:
-        await progress_msg.edit_text("✍️ Раскрываю акценты пары в полный разбор и проверяю текст...")
+        report_json = parse_report_json(buffer)
     except Exception:
-        pass
-
-    review_prompt = build_synastry_review_prompt(
-        buffer,
-        chart_data,
-        first_name=first_name,
-        partner_name=partner_name,
-    )
-    try:
-        reviewed, review_stop_reason = await interpret_solar_chart(review_prompt)
-        if reviewed.strip():
-            buffer = reviewed
-            cut_off_note = (
-                "\n\n⚠️ Ответ получился длиннее лимита и обрезался даже после сокращения."
-                if review_stop_reason == "max_tokens"
-                else ""
+        fallback_prompt = build_synastry_prompt(
+            chart_data,
+            first_name=first_name,
+            partner_name=partner_name,
+        )
+        try:
+            await progress_msg.edit_text(
+                "✍️ Собираю текстовую версию синастрии, визуальный шаблон не принял данные..."
             )
-    except Exception:
-        pass
+        except Exception:
+            pass
+        try:
+            buffer, stop_reason = await interpret_solar_chart(fallback_prompt)
+        except Exception as e:
+            await progress_msg.edit_text(f"Не удалось собрать отчёт: {e}")
+            await state.clear()
+            return
 
-    teaser = extract_main_theme(buffer)
-    if not teaser.strip():
-        teaser = "Разбор совместимости готов — основной текст смотри в приложенном файле ниже."
+    cut_off_note = (
+        "\n\n⚠️ Ответ получился длиннее лимита и мог быть обрезан."
+        if stop_reason == "max_tokens"
+        else ""
+    )
+
+    if report_json:
+        teaser = structured_report_to_teaser(
+            {
+                "main_theme": {
+                    "title": (report_json.get("formula") or {}).get("phrase", ""),
+                    "text": (report_json.get("formula") or {}).get("text", ""),
+                },
+                "final_formula": (report_json.get("final") or {}).get("text", ""),
+            }
+        )
+    else:
+        teaser = extract_main_theme(buffer)
+        if not teaser.strip():
+            teaser = "Разбор совместимости готов — основной текст смотри в приложенном файле ниже."
     teaser += cut_off_note
     try:
         await progress_msg.edit_text(teaser)
@@ -1255,12 +1267,15 @@ async def _run_synastry_analysis(answer_target, from_user: User, state: FSMConte
 
     output_path = f"/tmp/synastry_{from_user.id}_{int(time.time())}.pdf"
     title = f"Синастрия {first_name} и {partner_name}".strip()
-    visual_profile = build_synastry_profile(
-        chart_data,
-        first_name=first_name,
-        partner_name=partner_name,
-    )
-    await markdown_to_pdf(title, buffer, output_path, visual_profile=visual_profile)
+    if report_json:
+        await structured_synastry_to_pdf(report_json, output_path)
+    else:
+        visual_profile = build_synastry_profile(
+            chart_data,
+            first_name=first_name,
+            partner_name=partner_name,
+        )
+        await markdown_to_pdf(title, buffer, output_path, visual_profile=visual_profile)
 
     safe_first = re.sub(r'[\\/:*?"<>|]', "", first_name).strip()
     safe_partner = re.sub(r'[\\/:*?"<>|]', "", partner_name).strip()
