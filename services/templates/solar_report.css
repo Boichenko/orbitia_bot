@@ -154,7 +154,6 @@ p {
   background:
     radial-gradient(circle, rgba(214, 181, 109, .18), transparent 44%),
     rgba(255, 255, 255, .035);
-  box-shadow: 0 30px 80px rgba(0, 0, 0, .25);
 }
 
 .cover-art img {
@@ -162,7 +161,6 @@ p {
   height: 128mm;
   object-fit: cover;
   opacity: .82;
-  filter: saturate(.92) contrast(1.05);
 }
 
 .section-head {
@@ -464,9 +462,6 @@ p {
   color: #d6b56d;
   font-size: 11px;
   line-height: 1;
-  text-shadow:
-    0 0 5px rgba(214, 181, 109, .95),
-    0 0 13px rgba(214, 181, 109, .55);
 }
 
 .score-badge b {
@@ -655,7 +650,6 @@ p {
 .magic-ring-progress {
   stroke: #d6b56d;
   stroke-width: 2;
-  filter: drop-shadow(0 0 2px rgba(214, 181, 109, .9)) drop-shadow(0 0 7px rgba(214, 181, 109, .34));
 }
 
 .ring-center {
@@ -772,10 +766,6 @@ p {
   border: 1.2px solid #f0c85d;
   border-radius: 50%;
   background: transparent;
-  box-shadow:
-    0 0 2.5mm rgba(214, 181, 109, .95),
-    0 0 7mm rgba(214, 181, 109, .58),
-    0 0 12mm rgba(214, 181, 109, .24);
   transform: translate(-50%, -50%);
   z-index: 2;
 }
@@ -908,7 +898,6 @@ p {
   place-items: center;
   border-radius: 50%;
   background: radial-gradient(circle, #ead37d 0%, #c9ad77 42%, rgba(122, 92, 255, .88) 100%);
-  box-shadow: 0 0 13px rgba(214, 181, 109, .24), 0 0 24px rgba(122, 92, 255, .2);
   color: #171225;
   font-family: Georgia, serif;
   font-size: 15px;
