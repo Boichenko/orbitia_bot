@@ -686,44 +686,86 @@ p {
   font-size: 8.5px;
 }
 
+.axis-card {
+  min-height: 64mm;
+  padding: 8mm 7mm;
+  display: flex;
+  align-items: center;
+  border-color: rgba(214, 181, 109, .22);
+  background: rgba(9, 10, 31, .28);
+}
+
 .axis {
-  margin-top: 16mm;
+  width: 100%;
+  margin-top: 0;
+}
+
+.axis-title {
+  color: rgba(245, 239, 223, .52);
+  font-size: 8.6px;
+  font-weight: 800;
+  letter-spacing: 2.9px;
+  white-space: nowrap;
+  text-transform: uppercase;
 }
 
 .axis-line {
   position: relative;
-  height: 1.1mm;
+  height: .55mm;
   border-radius: 99px;
-  background: linear-gradient(90deg, rgba(214, 181, 109, .55), rgba(245, 239, 223, .25), rgba(122, 92, 255, .62));
+  margin-top: 16mm;
+  background: linear-gradient(90deg, rgba(214, 181, 109, .82), rgba(214, 181, 109, .48), rgba(122, 92, 255, .85));
+}
+
+.axis-line:before,
+.axis-line:after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  width: 3.6mm;
+  height: 3.6mm;
+  border-radius: 50%;
+  transform: translateY(-50%);
+}
+
+.axis-line:before {
+  left: 0;
+  background: #d6b56d;
+}
+
+.axis-line:after {
+  right: 0;
+  background: #a75bdc;
 }
 
 .axis-line span {
   position: absolute;
   left: var(--pos);
   top: 50%;
-  width: 8.5mm;
-  height: 8.5mm;
-  border: 1.4px solid #d6b56d;
+  width: 11mm;
+  height: 11mm;
+  border: 1.2px solid #f0c85d;
   border-radius: 50%;
-  background: #171225;
-  box-shadow: 0 0 18px rgba(214, 181, 109, .55);
+  background: #07071b;
+  box-shadow: 0 0 8mm rgba(214, 181, 109, .55);
   transform: translate(-50%, -50%);
+  z-index: 2;
 }
 
 .axis-labels {
   display: flex;
   justify-content: space-between;
-  margin-top: 8mm;
-  color: rgba(245, 239, 223, .58);
-  font-size: 9px;
-  letter-spacing: 2px;
+  margin-top: 9mm;
+  color: rgba(245, 239, 223, .68);
+  font-size: 9.5px;
+  letter-spacing: 2.8px;
   text-transform: uppercase;
 }
 
 .axis p {
-  margin-top: 9mm;
-  color: rgba(245, 239, 223, .45);
-  font-size: 9.5px;
+  margin-top: 11mm;
+  color: rgba(245, 239, 223, .46);
+  font-size: 10.5px;
   line-height: 1.35;
   text-align: center;
 }

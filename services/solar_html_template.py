@@ -338,11 +338,11 @@ def _money_ring(score: int) -> str:
 
 
 def _relationship_axis(score: int) -> str:
-    position = max(18, min(82, 35 + score * 4))
+    position = max(16, min(84, score * 10))
     return f"""
-    <div class="visual-card">
-      <div class="visual-title">близость ↔ свобода</div>
+    <div class="visual-card axis-card">
       <div class="axis">
+        <div class="axis-title">близость ↔ свобода</div>
         <div class="axis-line" style="--pos:{position}%"><span></span></div>
         <div class="axis-labels"><span>близость</span><span>свобода</span></div>
         <p>Баланс близости и личного пространства</p>
