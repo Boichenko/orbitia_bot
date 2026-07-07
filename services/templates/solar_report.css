@@ -901,25 +901,46 @@ p {
   position: relative;
   display: grid;
   place-items: center;
-  height: 63mm;
+  height: 53mm;
+  margin-top: 2mm;
 }
 
 .core svg {
-  width: 58mm;
-  height: 58mm;
+  width: 49mm;
+  height: 49mm;
 }
 
 .core b {
   position: absolute;
-  width: 21mm;
-  height: 21mm;
+  width: 16mm;
+  height: 16mm;
   display: grid;
   place-items: center;
   border-radius: 50%;
-  background: radial-gradient(circle, #d6b56d, rgba(122, 92, 255, .82));
+  background: radial-gradient(circle at 42% 42%, #efd982 0%, #c2aa7a 34%, rgba(122, 92, 255, .9) 82%);
+  box-shadow: 0 0 13px rgba(214, 181, 109, .24), 0 0 24px rgba(122, 92, 255, .2);
   color: #171225;
   font-family: Georgia, serif;
-  font-size: 22px;
+  font-size: 18px;
+}
+
+.core-words {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.15mm;
+  margin-top: 1.5mm;
+  color: rgba(245, 239, 223, .48);
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.core-words i {
+  width: .55mm;
+  height: .55mm;
+  border-radius: 50%;
+  background: rgba(214, 181, 109, .62);
 }
 
 .risk-grid,

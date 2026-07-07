@@ -263,7 +263,7 @@ def _category_page(category: dict, key: str, number: int) -> str:
               <p>{_safe(" · ".join(str(item) for item in (category.get("astro_basis") or [])[:4]))}</p>
             </div>
           </div>
-          {_category_visual(key, score)}
+          {_category_visual(key, score, category)}
         </div>
         <div class="category-focus">
           <article>
@@ -280,7 +280,9 @@ def _category_page(category: dict, key: str, number: int) -> str:
     """
 
 
-def _category_visual(key: str, score: int) -> str:
+def _category_visual(key: str, score: int, category: dict | None = None) -> str:
+    if key == "inner":
+        return _inner_core(score, category or {})
     return {
         "career": _career_ladder,
         "money": _money_ring,
@@ -288,7 +290,6 @@ def _category_visual(key: str, score: int) -> str:
         "home": _foundation,
         "health": _battery,
         "communication": _communication_bars,
-        "inner": _inner_core,
     }.get(key, _career_ladder)(score)
 
 
@@ -420,7 +421,21 @@ def _communication_bars(score: int) -> str:
     """
 
 
-def _inner_core(score: int) -> str:
+def _inner_keywords(category: dict) -> list[str]:
+    keywords = category.get("keywords")
+    if not isinstance(keywords, list):
+        keywords = []
+    words = [str(word).strip() for word in keywords if str(word).strip()]
+    fallback = ["глубина", "тишина", "сила"]
+    return (words + fallback)[:3]
+
+
+def _inner_core(score: int, category: dict) -> str:
+    words = _inner_keywords(category)
+    word_markup = "".join(
+        f"<span>{_safe(word)}</span>{'<i></i>' if index < len(words) - 1 else ''}"
+        for index, word in enumerate(words)
+    )
     return f"""
     <div class="visual-card">
       <div class="visual-title">внутреннее ядро</div>
@@ -433,7 +448,7 @@ def _inner_core(score: int) -> str:
         </svg>
         <b>{score}</b>
       </div>
-      <div class="visual-caption"><span>глубина</span><span>тишина</span><span>сила</span></div>
+      <div class="core-words">{word_markup}</div>
     </div>
     """
 
