@@ -57,7 +57,6 @@ p {
 .kicker,
 .eyebrow,
 .section-head,
-.category-label,
 .block-title {
   color: #d6b56d;
   font-size: 8.5px;
@@ -187,6 +186,10 @@ p {
 
 .section-head b {
   color: rgba(245, 239, 223, .58);
+}
+
+.category-section-head {
+  margin-bottom: 7mm;
 }
 
 .late {
@@ -429,7 +432,7 @@ p {
 }
 
 .category-header h2 {
-  margin-top: 3mm;
+  margin-top: 0;
   color: #f5efdf;
   font-size: 35px;
   line-height: 1.02;

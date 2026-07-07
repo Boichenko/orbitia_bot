@@ -233,17 +233,20 @@ def _list_items(items, limit: int = 4) -> str:
 
 
 def _category_pages(report: dict) -> str:
-    return "".join(_category_page(_category_by_key(report, key), key, index + 1) for index, key in enumerate(_CATEGORY_ORDER))
+    return "".join(_category_page(_category_by_key(report, key), key) for key in _CATEGORY_ORDER)
 
 
-def _category_page(category: dict, key: str, number: int) -> str:
+def _category_page(category: dict, key: str) -> str:
     score = _score(category.get("score"))
     return f"""
     <section class="page category-page">
       <div class="category-shell">
+        <div class="section-head category-section-head">
+          <span>03</span>
+          <b>Категория</b>
+        </div>
         <header class="category-header">
           <div>
-            <div class="category-label">03.{number:02d} категория</div>
             <h2>{_safe(category.get("title"), _DEFAULT_TITLES.get(key, key))}</h2>
             <p>{_safe(category.get("summary"))}</p>
           </div>
