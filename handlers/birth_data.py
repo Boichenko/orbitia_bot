@@ -59,12 +59,12 @@ PROJECT_ROOT = os.path.dirname(os.path.dirname(__file__))
 PREVIEW_PATHS = {
     "solar": [
         (
-            os.path.join(PROJECT_ROOT, "assets", "previews", "solar_cover.png"),
-            "Так выглядит обложка PDF-отчёта. В твоём файле будут твой период, город соляра, общий балл и топ-сфера.",
-        ),
-        (
             os.path.join(PROJECT_ROOT, "assets", "previews", "solar_year_map.png"),
             "Карта года в одном экране: сферы, баллы и краткий анализ. Это пример визуализации, твои значения будут рассчитаны персонально.",
+        ),
+        (
+            os.path.join(PROJECT_ROOT, "assets", "previews", "solar_main_theme.png"),
+            "Главная тема года и дополнительные акценты: в твоём отчёте формулировки будут собраны по личному расчёту.",
         ),
         (
             os.path.join(PROJECT_ROOT, "assets", "previews", "solar_category.png"),
@@ -114,22 +114,24 @@ async def process_report_type(callback: CallbackQuery, state: FSMContext):
     report_type = callback.data.split(":")[1]
     await callback.answer()
 
+    await _begin_report_type(callback.message, state, callback.from_user.id, report_type, edit=True)
+
+
+async def _begin_report_type(answer_target, state: FSMContext, user_id: int, report_type: str, edit: bool = False) -> None:
     if report_type not in {"solar", "synastry"}:
-        await callback.message.answer("Не поняла тип расчёта. Нажми /start и выбери ещё раз.")
+        await answer_target.answer("Не поняла тип расчёта. Нажми /start и выбери ещё раз.")
         return
 
-    log_event(callback.from_user.id, f"{report_type}_selected")
+    log_event(user_id, f"{report_type}_selected")
     await state.update_data(report_type=report_type)
     if report_type == "synastry":
-        await callback.message.edit_text(
-            "Считаем синастрию / совместимость 💞\n\n"
-            "Сначала соберём твои данные. Как тебя зовут?"
-        )
+        text = "Считаем синастрию / совместимость 💞\n\nСначала соберём твои данные. Как тебя зовут?"
     else:
-        await callback.message.edit_text(
-            "Считаем соляр 🌞\n\n"
-            "Как зовут человека, для которого считаем?"
-        )
+        text = "Считаем соляр 🌞\n\nКак зовут человека, для которого считаем?"
+    if edit:
+        await answer_target.edit_text(text)
+    else:
+        await answer_target.answer(text)
     await state.set_state(SolarStates.waiting_name)
 
 
@@ -1144,7 +1146,8 @@ async def _run_solar_analysis(answer_target, from_user: User, state: FSMContext)
 
     kb = InlineKeyboardMarkup(
         inline_keyboard=[
-            [InlineKeyboardButton(text="🔄 Рассчитать другой соляр", callback_data="restart:new")]
+            [InlineKeyboardButton(text="🔄 Рассчитать другой соляр", callback_data="restart:solar")],
+            [InlineKeyboardButton(text="💞 Рассчитать синастрию", callback_data="restart:synastry")],
         ]
     )
     await answer_target.answer("Готово! Если нужен ещё один разбор:", reply_markup=kb)
@@ -1311,7 +1314,8 @@ async def _run_synastry_analysis(answer_target, from_user: User, state: FSMConte
 
     kb = InlineKeyboardMarkup(
         inline_keyboard=[
-            [InlineKeyboardButton(text="🔄 Рассчитать ещё", callback_data="restart:new")]
+            [InlineKeyboardButton(text="💞 Рассчитать ещё одну синастрию", callback_data="restart:synastry")],
+            [InlineKeyboardButton(text="🌞 Рассчитать соляр", callback_data="restart:solar")],
         ]
     )
     await answer_target.answer("Готово! Если нужен ещё один разбор:", reply_markup=kb)
@@ -1323,3 +1327,14 @@ async def _run_synastry_analysis(answer_target, from_user: User, state: FSMConte
 async def process_restart(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
     await start_flow(callback.message, state)
+
+
+@router.callback_query(F.data.startswith("restart:"))
+async def process_restart_report_type(callback: CallbackQuery, state: FSMContext):
+    report_type = callback.data.split(":", 1)[1]
+    if report_type == "new":
+        await process_restart(callback, state)
+        return
+    await callback.answer()
+    await state.clear()
+    await _begin_report_type(callback.message, state, callback.from_user.id, report_type)
