@@ -13,6 +13,7 @@ from aiogram.types import (
     FSInputFile,
     InlineKeyboardButton,
     InlineKeyboardMarkup,
+    InputMediaPhoto,
     LabeledPrice,
     Message,
     PreCheckoutQuery,
@@ -768,13 +769,15 @@ async def process_confirm_go(callback: CallbackQuery, state: FSMContext):
         return
 
     try:
-        await callback.message.edit_text("Данные приняты. Показываю, что будет внутри отчёта...")
+        await callback.message.delete()
     except Exception:
-        pass
-    await asyncio.sleep(0.9)
+        try:
+            await callback.message.edit_text("Данные приняты. Показываю пример готового отчёта...")
+        except Exception:
+            pass
+    await asyncio.sleep(0.5)
 
-    await callback.message.answer(pre_payment_pitch)
-    await _send_report_previews(callback.message, report_type)
+    await _send_pre_payment_preview(callback.message, report_type, pre_payment_pitch)
 
     if report_type == "synastry":
         title = "Синастрия / совместимость"
@@ -826,21 +829,28 @@ def _solar_period_text(data: dict) -> str:
     return f"от {_format_russian_date(start)} до {_format_russian_date(end)}"
 
 
-async def _send_report_previews(message: Message, report_type: str) -> None:
+async def _send_pre_payment_preview(message: Message, report_type: str, caption: str) -> None:
     previews = [
-        (path, caption)
-        for path, caption in PREVIEW_PATHS.get(report_type, [])
+        (path, preview_caption)
+        for path, preview_caption in PREVIEW_PATHS.get(report_type, [])
         if os.path.exists(path)
     ]
     if not previews:
+        await message.answer(caption)
         return
-    await asyncio.sleep(0.5)
-    await message.answer("Ниже — пример, как выглядит готовый PDF-отчёт:")
-    for path, caption in previews:
-        try:
-            await message.answer_photo(FSInputFile(path), caption=caption)
-        except Exception:
-            continue
+    media = [
+        InputMediaPhoto(media=FSInputFile(path), caption=caption if index == 0 else None)
+        for index, (path, _) in enumerate(previews[:10])
+    ]
+    try:
+        await message.answer_media_group(media)
+    except Exception:
+        await message.answer(caption)
+        for path, _ in previews:
+            try:
+                await message.answer_photo(FSInputFile(path))
+            except Exception:
+                continue
 
 
 def _build_solar_pre_payment_pitch(data: dict) -> str:
@@ -848,24 +858,14 @@ def _build_solar_pre_payment_pitch(data: dict) -> str:
 
     return (
         "Данные приняты.\n\n"
-        "По ним можно построить персональный соляр — карту твоего года "
-        f"{period}.\n\n"
-        "Это не общий гороскоп по знаку, а персональный PDF-прогноз по сферам жизни. "
-        "В нём видно, где год будет самым активным: карьера, деньги, отношения, дом, "
-        "здоровье, общение и внутреннее состояние.\n\n"
-        "Внутри отчёта будет карта года с баллами, главная тема периода, отдельные "
-        "страницы по ключевым сферам, риски, возможности и практический план. "
-        "Каждая страница соединяет понятный человеческий вывод и астрологическое основание.\n\n"
-        "Ниже можно посмотреть пример, как выглядит готовый PDF. "
-        "В твоём PDF все значения и трактовки будут рассчитаны индивидуально.\n\n"
-        f"Полный разбор стоит {SOLAR_STARS_PRICE} ⭐.\n\n"
-        "Внутри отчёта:\n"
-        "— главная тема года;\n"
-        "— карта сфер с баллами;\n"
-        "— разбор любви, денег, карьеры, семьи и здоровья;\n"
-        "— риски и возможности года;\n"
-        "— практический фокус;\n"
-        "— PDF-отчёт."
+        f"По ним можно построить персональный соляр на период {period}: "
+        "PDF-прогноз по сферам жизни, а не общий гороскоп по знаку.\n\n"
+        "Внутри: карта года с баллами, главная тема периода, разбор ключевых сфер "
+        "(карьера, деньги, отношения, дом, здоровье, внутреннее состояние), риски, "
+        "возможности и практический план.\n\n"
+        "На скринах — пример готового PDF. В твоём отчёте значения и трактовки будут "
+        "рассчитаны индивидуально.\n\n"
+        f"Полный разбор — {SOLAR_STARS_PRICE} ⭐."
     )
 
 
@@ -875,22 +875,13 @@ def _build_synastry_pre_payment_pitch(data: dict) -> str:
 
     return (
         "Данные приняты.\n\n"
-        f"По ним можно построить персональную синастрию пары {first_name} + {partner_name} — "
-        "разбор совместимости по двум натальным картам.\n\n"
-        "В полном разборе будет видно, какие сферы связи активированы сильнее всего: "
-        "эмоциональная близость, химия, коммуникация, быт, долгосрочность и зоны напряжения. "
-        "Отчёт показывает не просто “подходим или нет”, а как именно работает динамика пары: "
-        "где ресурс, где риск и на что опираться в отношениях.\n\n"
-        "Ниже можно посмотреть пример, как выглядит готовый отчёт. "
-        "В твоём PDF все значения и трактовки будут рассчитаны индивидуально.\n\n"
-        f"Полный разбор стоит {SYNASTRY_STARS_PRICE} ⭐.\n\n"
-        "Внутри отчёта:\n"
-        "— общая совместимость;\n"
-        "— колесо сфер отношений с баллами;\n"
-        "— разбор химии, эмоций, коммуникации и долгосрочности;\n"
-        "— главные ресурсы и риски пары;\n"
-        "— практические рекомендации;\n"
-        "— PDF-отчёт."
+        f"По ним можно построить синастрию пары {first_name} + {partner_name}: "
+        "PDF-разбор совместимости по двум натальным картам.\n\n"
+        "Внутри: общая динамика пары, эмоциональная связь, химия, коммуникация, быт, "
+        "долгосрочность, зоны напряжения и практические рекомендации.\n\n"
+        "На скринах — пример готового PDF. В твоём отчёте значения и трактовки будут "
+        "рассчитаны индивидуально.\n\n"
+        f"Полный разбор — {SYNASTRY_STARS_PRICE} ⭐."
     )
 
 
