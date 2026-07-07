@@ -341,8 +341,8 @@ def _money_ring(score: int) -> str:
           <circle class="magic-ring-track" cx="100" cy="100" r="74" />
           <circle class="magic-ring-progress" cx="100" cy="100" r="74" pathLength="{circumference:.2f}" stroke-dasharray="{dash:.2f} {gap:.2f}" />
           <g class="magic-spark" transform="translate({end_x:.2f} {end_y:.2f})">
-            <circle r="3.1" />
-            <path d="M 0 -10 L 0 -4 M 0 4 L 0 10 M -10 0 L -4 0 M 4 0 L 10 0 M -6 -6 L -2.8 -2.8 M 2.8 2.8 L 6 6 M 6 -6 L 2.8 -2.8 M -2.8 2.8 L -6 6" />
+            <circle r="2.1" />
+            <path d="M 0 -11 L .8 -4.2 M -1 4.5 L -2.2 9.5 M -10 -1.5 L -4.2 -.4 M 4.5 1.1 L 11 2.8 M -7 -7 L -3.2 -3.1 M 3.2 3.1 L 8.5 6.8 M 6 -8 L 2.6 -3.4 M -3.4 2.4 L -8 5.8 M 1.8 -6.5 L 3.8 -10.2 M -5.5 1.8 L -9 3.2" />
           </g>
         </svg>
         <div class="ring-center"><b>{score}/10</b><span>ресурс</span></div>

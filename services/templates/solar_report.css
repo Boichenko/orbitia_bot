@@ -646,13 +646,13 @@ p {
 
 .magic-ring-track {
   stroke: rgba(245, 239, 223, .10);
-  stroke-width: 3.2;
+  stroke-width: 2.1;
 }
 
 .magic-ring-progress {
   stroke: #d6b56d;
-  stroke-width: 4.2;
-  filter: drop-shadow(0 0 3px rgba(214, 181, 109, .8)) drop-shadow(0 0 8px rgba(214, 181, 109, .38));
+  stroke-width: 2.7;
+  filter: drop-shadow(0 0 2px rgba(214, 181, 109, .9)) drop-shadow(0 0 7px rgba(214, 181, 109, .34));
 }
 
 .magic-spark circle {
@@ -664,7 +664,7 @@ p {
   fill: none;
   stroke: #d6b56d;
   stroke-linecap: round;
-  stroke-width: 1.6;
+  stroke-width: 1.25;
   filter: drop-shadow(0 0 4px rgba(214, 181, 109, .75));
 }
 
