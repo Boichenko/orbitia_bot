@@ -247,7 +247,7 @@ def _category_page(category: dict, key: str, number: int) -> str:
             <h2>{_safe(category.get("title"), _DEFAULT_TITLES.get(key, key))}</h2>
             <p>{_safe(category.get("summary"))}</p>
           </div>
-          <div class="score-badge"><span class="score-dot"></span><b>{score}</b><em>/10</em></div>
+          <div class="score-badge"><span class="score-dot">●</span><b>{score}</b><em>/10</em></div>
         </header>
         <div class="category-divider"></div>
         <div class="category-layout">

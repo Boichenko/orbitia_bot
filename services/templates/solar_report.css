@@ -455,12 +455,15 @@ p {
 }
 
 .score-dot {
-  width: 3.2mm;
-  height: 3.2mm;
+  width: auto;
+  height: auto;
   flex: 0 0 auto;
-  border-radius: 50%;
-  background: #d6b56d;
-  box-shadow: 0 0 14px rgba(214, 181, 109, .6);
+  color: #d6b56d;
+  font-size: 11px;
+  line-height: 1;
+  text-shadow:
+    0 0 5px rgba(214, 181, 109, .95),
+    0 0 13px rgba(214, 181, 109, .55);
 }
 
 .score-badge b {
