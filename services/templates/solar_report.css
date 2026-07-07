@@ -651,21 +651,8 @@ p {
 
 .magic-ring-progress {
   stroke: #d6b56d;
-  stroke-width: 2.7;
+  stroke-width: 2;
   filter: drop-shadow(0 0 2px rgba(214, 181, 109, .9)) drop-shadow(0 0 7px rgba(214, 181, 109, .34));
-}
-
-.magic-spark circle {
-  fill: #d6b56d;
-  filter: drop-shadow(0 0 4px rgba(214, 181, 109, .9));
-}
-
-.magic-spark path {
-  fill: none;
-  stroke: #d6b56d;
-  stroke-linecap: round;
-  stroke-width: 1.25;
-  filter: drop-shadow(0 0 4px rgba(214, 181, 109, .75));
 }
 
 .ring-center {
@@ -912,35 +899,39 @@ p {
 
 .core b {
   position: absolute;
-  width: 16mm;
-  height: 16mm;
+  width: 11mm;
+  height: 11mm;
   display: grid;
   place-items: center;
   border-radius: 50%;
-  background: radial-gradient(circle at 42% 42%, #efd982 0%, #c2aa7a 34%, rgba(122, 92, 255, .9) 82%);
+  background: radial-gradient(circle, #ead37d 0%, #c9ad77 42%, rgba(122, 92, 255, .88) 100%);
   box-shadow: 0 0 13px rgba(214, 181, 109, .24), 0 0 24px rgba(122, 92, 255, .2);
   color: #171225;
   font-family: Georgia, serif;
-  font-size: 18px;
+  font-size: 15px;
 }
 
 .core-words {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 1.15mm;
+  gap: 1mm;
   margin-top: 1.5mm;
   color: rgba(245, 239, 223, .48);
   font-size: 9px;
   font-weight: 700;
-  line-height: 1;
+  line-height: 1.1;
 }
 
-.core-words i {
-  width: .55mm;
-  height: .55mm;
-  border-radius: 50%;
-  background: rgba(214, 181, 109, .62);
+.core-words em {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 1em;
+  color: rgba(214, 181, 109, .58);
+  font-style: normal;
+  font-weight: 500;
+  line-height: 1;
 }
 
 .risk-grid,

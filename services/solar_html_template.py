@@ -321,9 +321,6 @@ def _money_ring(score: int) -> str:
     circumference = 2 * math.pi * 74
     dash = circumference * percent / 100
     gap = circumference - dash
-    angle = -90 + 360 * percent / 100
-    end_x = 100 + math.cos(math.radians(angle)) * 74
-    end_y = 100 + math.sin(math.radians(angle)) * 74
     metrics = [
         ("Доходы", min(100, percent + 5)),
         ("Ценность", percent),
@@ -341,10 +338,6 @@ def _money_ring(score: int) -> str:
         <svg class="magic-ring" viewBox="0 0 200 200">
           <circle class="magic-ring-track" cx="100" cy="100" r="74" />
           <circle class="magic-ring-progress" cx="100" cy="100" r="74" pathLength="{circumference:.2f}" stroke-dasharray="{dash:.2f} {gap:.2f}" />
-          <g class="magic-spark" transform="translate({end_x:.2f} {end_y:.2f})">
-            <circle r="2.1" />
-            <path d="M 0 -11 L .8 -4.2 M -1 4.5 L -2.2 9.5 M -10 -1.5 L -4.2 -.4 M 4.5 1.1 L 11 2.8 M -7 -7 L -3.2 -3.1 M 3.2 3.1 L 8.5 6.8 M 6 -8 L 2.6 -3.4 M -3.4 2.4 L -8 5.8 M 1.8 -6.5 L 3.8 -10.2 M -5.5 1.8 L -9 3.2" />
-          </g>
         </svg>
         <div class="ring-center"><b>{score}/10</b><span>ресурс</span></div>
       </div>
@@ -433,7 +426,7 @@ def _inner_keywords(category: dict) -> list[str]:
 def _inner_core(score: int, category: dict) -> str:
     words = _inner_keywords(category)
     word_markup = "".join(
-        f"<span>{_safe(word)}</span>{'<i></i>' if index < len(words) - 1 else ''}"
+        f"<span>{_safe(word)}</span>{'<em>·</em>' if index < len(words) - 1 else ''}"
         for index, word in enumerate(words)
     )
     return f"""
