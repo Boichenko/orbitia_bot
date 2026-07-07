@@ -626,33 +626,60 @@ p {
   width: 44mm;
   height: 44mm;
   margin: 4mm auto 0;
-  border-radius: 50%;
-  background:
-    conic-gradient(from -90deg, #d6b56d 0 var(--value), rgba(245, 239, 223, .08) var(--value) 100%);
-  box-shadow:
-    0 0 12px rgba(214, 181, 109, .12),
-    inset 0 0 0 1px rgba(214, 181, 109, .18);
 }
 
-.ring-wrap:before {
-  content: "";
+.magic-ring {
   position: absolute;
-  inset: 11.5mm;
-  border-radius: 50%;
-  background: #171225;
-  border: 1px solid rgba(214, 181, 109, .35);
-  box-shadow: 0 0 14px rgba(214, 181, 109, .12);
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.magic-ring-track,
+.magic-ring-progress {
+  fill: none;
+  stroke-linecap: round;
+  transform: rotate(-90deg);
+  transform-origin: 100px 100px;
+}
+
+.magic-ring-track {
+  stroke: rgba(245, 239, 223, .10);
+  stroke-width: 3.2;
+}
+
+.magic-ring-progress {
+  stroke: #d6b56d;
+  stroke-width: 4.2;
+  filter: drop-shadow(0 0 3px rgba(214, 181, 109, .8)) drop-shadow(0 0 8px rgba(214, 181, 109, .38));
+}
+
+.magic-spark circle {
+  fill: #d6b56d;
+  filter: drop-shadow(0 0 4px rgba(214, 181, 109, .9));
+}
+
+.magic-spark path {
+  fill: none;
+  stroke: #d6b56d;
+  stroke-linecap: round;
+  stroke-width: 1.6;
+  filter: drop-shadow(0 0 4px rgba(214, 181, 109, .75));
 }
 
 .ring-center {
   position: absolute;
-  inset: 14mm;
+  inset: 13.5mm;
+  border: 1px solid rgba(214, 181, 109, .24);
+  border-radius: 50%;
   display: grid;
   place-items: center;
   color: #d6b56d;
   font-size: 11px;
   font-weight: 800;
   text-align: center;
+  background: #171225;
 }
 
 .ring-center b {

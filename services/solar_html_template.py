@@ -317,6 +317,12 @@ def _career_ladder(score: int) -> str:
 
 def _money_ring(score: int) -> str:
     percent = score * 10
+    circumference = 2 * math.pi * 74
+    dash = circumference * percent / 100
+    gap = circumference - dash
+    angle = -90 + 360 * percent / 100
+    end_x = 100 + math.cos(math.radians(angle)) * 74
+    end_y = 100 + math.sin(math.radians(angle)) * 74
     metrics = [
         ("Доходы", min(100, percent + 5)),
         ("Ценность", percent),
@@ -330,7 +336,15 @@ def _money_ring(score: int) -> str:
     return f"""
     <div class="visual-card">
       <div class="visual-title">ресурсная карта</div>
-      <div class="ring-wrap" style="--value:{percent}%">
+      <div class="ring-wrap">
+        <svg class="magic-ring" viewBox="0 0 200 200">
+          <circle class="magic-ring-track" cx="100" cy="100" r="74" />
+          <circle class="magic-ring-progress" cx="100" cy="100" r="74" pathLength="{circumference:.2f}" stroke-dasharray="{dash:.2f} {gap:.2f}" />
+          <g class="magic-spark" transform="translate({end_x:.2f} {end_y:.2f})">
+            <circle r="3.1" />
+            <path d="M 0 -10 L 0 -4 M 0 4 L 0 10 M -10 0 L -4 0 M 4 0 L 10 0 M -6 -6 L -2.8 -2.8 M 2.8 2.8 L 6 6 M 6 -6 L 2.8 -2.8 M -2.8 2.8 L -6 6" />
+          </g>
+        </svg>
         <div class="ring-center"><b>{score}/10</b><span>ресурс</span></div>
       </div>
       <div class="resource-metrics">{rows}</div>
