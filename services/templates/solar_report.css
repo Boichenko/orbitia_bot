@@ -722,8 +722,8 @@ p {
   content: "";
   position: absolute;
   top: 50%;
-  width: 3.6mm;
-  height: 3.6mm;
+  width: 1.8mm;
+  height: 1.8mm;
   border-radius: 50%;
   transform: translateY(-50%);
 }
@@ -742,11 +742,11 @@ p {
   position: absolute;
   left: var(--pos);
   top: 50%;
-  width: 11mm;
-  height: 11mm;
+  width: 5.5mm;
+  height: 5.5mm;
   border: 1.2px solid #f0c85d;
   border-radius: 50%;
-  background: #07071b;
+  background: transparent;
   box-shadow: 0 0 8mm rgba(214, 181, 109, .55);
   transform: translate(-50%, -50%);
   z-index: 2;
