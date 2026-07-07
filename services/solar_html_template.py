@@ -316,11 +316,12 @@ def _career_ladder(score: int) -> str:
 
 
 def _money_ring(score: int) -> str:
+    percent = score * 10
     metrics = [
-        ("Доходы", min(100, score * 10 + 5)),
-        ("Ценность", score * 10),
-        ("Контроль", max(20, score * 10 - 10)),
-        ("Стратегия", min(100, score * 10 + 10)),
+        ("Доходы", min(100, percent + 5)),
+        ("Ценность", percent),
+        ("Контроль", max(20, percent - 10)),
+        ("Стратегия", min(100, percent + 10)),
     ]
     rows = "".join(
         f"<div><span>{_safe(label)}</span><b>{value}%</b></div>"
@@ -329,7 +330,7 @@ def _money_ring(score: int) -> str:
     return f"""
     <div class="visual-card">
       <div class="visual-title">ресурсная карта</div>
-      <div class="ring-wrap">
+      <div class="ring-wrap" style="--value:{percent}%">
         <div class="ring-center"><b>{score}/10</b><span>ресурс</span></div>
       </div>
       <div class="resource-metrics">{rows}</div>
