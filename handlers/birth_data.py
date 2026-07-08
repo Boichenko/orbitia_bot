@@ -55,8 +55,24 @@ NO_TIME_ANSWERS = {"не знаю", "не знаю точно", "незнаю", 
 SOLAR_STARS_PRICE = int(os.getenv("SOLAR_STARS_PRICE", "100"))
 SYNASTRY_STARS_PRICE = int(os.getenv("SYNASTRY_STARS_PRICE", "300"))
 PAYMENTS_ENABLED = os.getenv("PAYMENTS_ENABLED", "false").strip().lower() == "true"
+ADMIN_USER_ID = os.getenv("ADMIN_USER_ID", "").strip()
 REPORT_TYPES = {"solar", "synastry"}
 PROJECT_ROOT = os.path.dirname(os.path.dirname(__file__))
+TEST_ANNA_BIRTH_PLACE = {
+    "label": "Холмск, Сахалинская область, Россия",
+    "lat": 47.0408,
+    "lon": 142.0417,
+}
+TEST_SOLAR_PLACE = {
+    "label": "Варшава, Польша",
+    "lat": 52.2297,
+    "lon": 21.0122,
+}
+TEST_ALEXANDER_BIRTH_PLACE = {
+    "label": "Минск, Беларусь",
+    "lat": 53.9006,
+    "lon": 27.5590,
+}
 PREVIEW_PATHS = {
     "solar": [
         (
@@ -99,6 +115,14 @@ MONTH_NAMES = {
 }
 
 
+def _is_admin(user_id: Optional[int]) -> bool:
+    return bool(ADMIN_USER_ID) and str(user_id) == ADMIN_USER_ID
+
+
+def _test_place(place: dict) -> dict:
+    return dict(place)
+
+
 def _log_report_event(user_id: int, data: dict, step: str) -> None:
     report_type = data.get("report_type")
     if report_type in REPORT_TYPES:
@@ -134,6 +158,49 @@ async def _begin_report_type(answer_target, state: FSMContext, user_id: int, rep
     else:
         await answer_target.answer(text)
     await state.set_state(SolarStates.waiting_name)
+
+
+@router.message(Command("test_solar"))
+async def cmd_test_solar(message: Message, state: FSMContext):
+    if not _is_admin(message.from_user.id if message.from_user else None):
+        return
+
+    await state.clear()
+    await state.update_data(
+        report_type="solar",
+        person_name="Анна",
+        birth_date="25.10.1992",
+        birth_time="04:00",
+        birth_place=_test_place(TEST_ANNA_BIRTH_PLACE),
+        solar_place=_test_place(TEST_SOLAR_PLACE),
+        solar_cycle_year=2025,
+        user_context=None,
+    )
+    await message.answer("🧪 Запускаю тестовый соляр: Анна, 25.10.1992 04:00, Холмск → Варшава, 2025-2026.")
+    await _run_solar_analysis(message, message.from_user, state)
+
+
+@router.message(Command("test_sin"))
+@router.message(Command("test_synastry"))
+@router.message(Command("test_sin3"))
+async def cmd_test_synastry(message: Message, state: FSMContext):
+    if not _is_admin(message.from_user.id if message.from_user else None):
+        return
+
+    await state.clear()
+    await state.update_data(
+        report_type="synastry",
+        person_name="Анна",
+        birth_date="25.10.1992",
+        birth_time="04:00",
+        birth_place=_test_place(TEST_ANNA_BIRTH_PLACE),
+        partner_name="Александр",
+        partner_birth_date="01.06.1992",
+        partner_birth_time="04:24",
+        partner_birth_place=_test_place(TEST_ALEXANDER_BIRTH_PLACE),
+    )
+    await message.answer("🧪 Запускаю тестовую синастрию: Анна + Александр.")
+    await _run_synastry_analysis(message, message.from_user, state)
 
 
 # ---------------------------------------------------------------------------
@@ -912,11 +979,10 @@ async def cmd_paysupport(message: Message):
     )
 
 
-@router.message(Command("stats"))
+@router.message(Command("stats", "stat"))
 async def cmd_stats(message: Message):
     """Видна только владельцу бота (ADMIN_USER_ID в .env) — показывает воронку и источники."""
-    admin_id = os.getenv("ADMIN_USER_ID")
-    if admin_id and str(message.from_user.id) != admin_id.strip():
+    if not _is_admin(message.from_user.id if message.from_user else None):
         return
 
     summary = funnel_summary()
