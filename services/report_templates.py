@@ -14,6 +14,7 @@ SOLAR_CATEGORY_KEYS = [
     "health",
     "communication",
     "inner",
+    "sex",
 ]
 
 SYNASTRY_MAP_KEYS = [
@@ -49,6 +50,7 @@ def solar_report_template() -> dict[str, Any]:
             {"key": "health", "title": "Здоровье", "score": 8, "meaning": "одна короткая строка"},
             {"key": "communication", "title": "Общение", "score": 8, "meaning": "одна короткая строка"},
             {"key": "inner", "title": "Внутреннее", "score": 8, "meaning": "одна короткая строка"},
+            {"key": "sex", "title": "Секс", "score": 8, "meaning": "одна короткая строка"},
         ],
         "map_summary": (
             "короткий абзац анализа круга: какие 2–3 сферы самые сильные, "
@@ -140,6 +142,18 @@ def solar_report_template() -> dict[str, Any]:
             {
                 "key": "inner",
                 "title": "Внутреннее состояние",
+                "score": 8,
+                "summary": "короткий вывод",
+                "keywords": ["слово 1", "слово 2", "слово 3"],
+                "amplified": ["3–4 пункта"],
+                "manifestations": ["3–4 пункта"],
+                "risks": ["2–3 пункта"],
+                "actions": ["3–4 пункта"],
+                "astro_basis": ["2–4 конкретных фактора из таблиц"],
+            },
+            {
+                "key": "sex",
+                "title": "Секс и эротика",
                 "score": 8,
                 "summary": "короткий вывод",
                 "keywords": ["слово 1", "слово 2", "слово 3"],

@@ -926,6 +926,26 @@ p {
   line-height: 1;
 }
 
+.intimacy-card {
+  min-height: 64mm;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.intimacy-pulse {
+  width: 60mm;
+  margin: 6mm auto 0;
+  display: block;
+  overflow: visible;
+}
+
+.intimacy-pulse text {
+  fill: #d6b56d;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 14px;
+}
+
 .risk-grid,
 .opportunity-grid {
   display: grid;

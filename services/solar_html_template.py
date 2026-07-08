@@ -22,6 +22,7 @@ _DEFAULT_TITLES = {
     "health": "Здоровье",
     "communication": "Общение",
     "inner": "Внутреннее",
+    "sex": "Секс",
 }
 
 _CATEGORY_ORDER = [
@@ -32,6 +33,7 @@ _CATEGORY_ORDER = [
     "health",
     "communication",
     "inner",
+    "sex",
 ]
 
 
@@ -320,6 +322,7 @@ def _category_visual(key: str, score: int, category: dict | None = None) -> str:
         "home": _foundation,
         "health": _battery,
         "communication": _communication_bars,
+        "sex": _intimacy_pulse,
     }.get(key, _career_ladder)(score)
 
 
@@ -472,6 +475,28 @@ def _inner_core(score: int, category: dict) -> str:
         <b>{score}</b>
       </div>
       <div class="core-words">{word_markup}</div>
+    </div>
+    """
+
+
+def _intimacy_pulse(score: int) -> str:
+    percent = score * 10
+    return f"""
+    <div class="visual-card intimacy-card">
+      <div class="visual-title">пульс интимности</div>
+      <svg class="intimacy-pulse" viewBox="0 0 240 140">
+        <defs>
+          <linearGradient id="pulseGrad" x1="0" x2="1">
+            <stop offset="0" stop-color="#d6b56d" />
+            <stop offset="1" stop-color="#a75bdc" />
+          </linearGradient>
+        </defs>
+        <circle cx="80" cy="70" r="34" fill="rgba(214,181,109,.18)" stroke="rgba(214,181,109,.62)" stroke-width="1.5" />
+        <circle cx="160" cy="70" r="34" fill="rgba(122,92,255,.18)" stroke="rgba(167,91,220,.62)" stroke-width="1.5" />
+        <path d="M 113 70 Q 120 48, 126 70 T 139 70" fill="none" stroke="url(#pulseGrad)" stroke-width="2" stroke-linecap="round" />
+        <text x="120" y="126" text-anchor="middle">{percent}% энергии</text>
+      </svg>
+      <div class="core-words"><span>близость</span><em>·</em><span>желание</span><em>·</em><span>честность</span></div>
     </div>
     """
 
