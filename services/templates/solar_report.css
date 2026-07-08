@@ -1027,20 +1027,32 @@ p {
 }
 
 .heatmap-card {
+  position: relative;
   min-height: 31mm;
   padding: 7mm 8mm 6mm;
   border: 1px solid rgba(214, 181, 109, .24);
   border-radius: 10mm;
+  overflow: hidden;
+  background: rgba(23, 18, 37, .52);
+}
+
+.heatmap-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
   background:
     radial-gradient(circle at 76% 58%, rgba(245, 239, 223, .22), transparent 1.1mm),
     linear-gradient(105deg,
-      rgba(166, 130, 66, var(--warm)) 0%,
-      rgba(132, 89, 78, .66) var(--gold-end),
-      rgba(86, 55, 103, .68) var(--blend-end),
-      rgba(53, 34, 86, var(--violet)) 100%);
+      rgba(166, 130, 66, .72) 0%,
+      rgba(132, 89, 78, .66) 48%,
+      rgba(86, 55, 103, .68) 76%,
+      rgba(53, 34, 86, .78) 100%);
+  opacity: var(--heat-opacity);
 }
 
 .heatmap-card h3 {
+  position: relative;
+  z-index: 1;
   margin: 0 0 9mm;
   color: rgba(245, 239, 223, .72);
   font-family: "JetBrains Mono", DejaVu Sans Mono, monospace;
@@ -1052,6 +1064,8 @@ p {
 }
 
 .heatmap-card strong {
+  position: relative;
+  z-index: 1;
   color: #f5efdf;
   font-family: Georgia, "Times New Roman", serif;
   font-size: 28px;
