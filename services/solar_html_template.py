@@ -65,6 +65,7 @@ def render_solar_html(report: dict) -> str:
         "OPPORTUNITY_CARDS": _opportunity_cards(report.get("opportunities")),
         "PLAN_STEPS": _plan_steps(report.get("plan")),
         "FINAL_FORMULA": _safe(report.get("final_formula")),
+        "HEATMAP_CARDS": _heatmap_cards(report, cards),
     }
 
     html = _read_text(_HTML_TEMPLATE)
@@ -145,6 +146,32 @@ def _sphere_rows(cards: list[dict]) -> str:
         """
         for card in cards
     )
+
+
+def _heatmap_cards(report: dict, fallback_cards: list[dict]) -> str:
+    source = report.get("heatmap")
+    if not isinstance(source, list) or not source:
+        source = fallback_cards
+
+    cards = []
+    for item in source[:8]:
+        if not isinstance(item, dict):
+            continue
+        title = item.get("title") or item.get("sphere") or item.get("name")
+        score = _score(item.get("score") or item.get("level"), 5)
+        intensity = max(0, min(100, score * 10))
+        gold_alpha = min(.50, .12 + intensity / 260)
+        purple_alpha = min(.42, .16 + intensity / 330)
+        cards.append(
+            f"""
+            <article class="heatmap-card" style="--gold-alpha:{gold_alpha:.2f}; --purple-alpha:{purple_alpha:.2f}">
+              <h3>{_safe(title)}</h3>
+              <strong>{score}<span>/10</span></strong>
+            </article>
+            """
+        )
+
+    return "".join(cards)
 
 
 def _radar_svg(cards: list[dict]) -> str:

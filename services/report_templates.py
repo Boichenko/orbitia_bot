@@ -169,6 +169,16 @@ def solar_report_template() -> dict[str, Any]:
             {"step": 4, "action": "короткое действие"},
             {"step": 5, "action": "короткое действие"},
         ],
+        "heatmap": [
+            {"title": "Карьера и статус", "score": 8},
+            {"title": "Деньги и ресурсы", "score": 8},
+            {"title": "Отношения", "score": 8},
+            {"title": "Дом и семья", "score": 8},
+            {"title": "Здоровье и режим", "score": 8},
+            {"title": "Общение и обучение", "score": 8},
+            {"title": "Внутреннее состояние", "score": 8},
+            {"title": "Секс и эротика", "score": 8},
+        ],
         "final_formula": "один финальный абзац",
     }
 

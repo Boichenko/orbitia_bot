@@ -257,9 +257,10 @@ HTML-РЕФЕРЕНС ГОТОВОГО PDF-ШАБЛОНА:
   <section class="category health"><div class="battery">Восстановление / Рабочий ресурс / Перегруз</div></section>
   <section class="category communication"><div class="channel-bars">Обучение / Тексты / Встречи / Поездки</div></section>
   <section class="category inner"><div class="inner-core">Тишина / Смысл / Восстановление</div></section>
-  <section class="risks"><div class="heatmap">4 риска с уровнем напряжения</div></section>
+  <section class="risks"><div>4 риска с уровнем напряжения</div></section>
   <section class="opportunities"><article>4 короткие карточки возможностей</article></section>
   <section class="plan"><ol><li>5 практических шагов года</li></ol></section>
+  <section class="heatmap"><div>07 Тепловая карта: 7–8 сфер с баллами</div></section>
 </main>
 
 ЗАПОЛНЯЕМЫЙ JSON-ШАБЛОН:
@@ -286,6 +287,7 @@ inner — "Внутреннее состояние".
 В блоке communication не предлагай network map; шаблон рисует 4 полосы: обучение, тексты, встречи, поездки.
 В отношениях смысл должен подходить для простой оси "Близость ↔ Свобода".
 В блоке inner keywords должны описывать внутренний фокус года, например не шаблонно "глубина · тишина · сила", а персонально по расчёту: "психика", "контроль", "опора" и т.п.
+В блоке heatmap дай 7–8 карточек плотности события по сферам. Баллы должны соответствовать логике sphere_map/categories. Можно добавить "Секс и эротика", если по расчёту есть выраженный акцент 5/8 дома, Венеры, Марса, Плутона или соответствующих аспектов.
 
 ДАННЫЕ РАСЧЁТА:
 {data_block}"""
