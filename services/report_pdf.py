@@ -11,6 +11,7 @@ import re
 import xml.sax.saxutils as saxutils
 
 from services.solar_html_template import render_solar_html
+from services.synastry_html_template import render_synastry_html
 
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
@@ -2057,7 +2058,7 @@ def _structured_synastry_html(report: dict) -> str:
 
 
 async def structured_synastry_to_pdf(report: dict, output_path: str) -> None:
-    await _html_string_to_pdf(_structured_synastry_html(report), output_path)
+    await _html_string_to_pdf(render_synastry_html(report), output_path)
 
 
 async def _html_string_to_pdf(html: str, output_path: str) -> None:
