@@ -1032,12 +1032,11 @@ p {
   border: 1px solid rgba(214, 181, 109, .24);
   border-radius: 10mm;
   background:
-    radial-gradient(circle at 76% 58%, rgba(245, 239, 223, .24), transparent 1.2mm),
-    linear-gradient(115deg,
-      rgba(214, 181, 109, .52) 0%,
-      rgba(134, 105, 74, .44) var(--heat),
-      rgba(122, 92, 255, .34) calc(var(--heat) + 8%),
-      rgba(55, 36, 92, .42) 100%);
+    radial-gradient(circle at 76% 58%, rgba(245, 239, 223, .22), transparent 1.1mm),
+    linear-gradient(105deg,
+      rgba(166, 130, 66, var(--warm)) 0%,
+      rgba(122, 84, 84, .64) var(--gold-mid),
+      rgba(82, 52, 103, .72) 100%);
 }
 
 .heatmap-card h3 {
