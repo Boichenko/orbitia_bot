@@ -173,10 +173,10 @@ async def cmd_test_solar(message: Message, state: FSMContext):
         birth_time="04:00",
         birth_place=_test_place(TEST_ANNA_BIRTH_PLACE),
         solar_place=_test_place(TEST_SOLAR_PLACE),
-        solar_cycle_year=2025,
+        solar_cycle_year=2026,
         user_context=None,
     )
-    await message.answer("🧪 Запускаю тестовый соляр: Анна, 25.10.1992 04:00, Холмск → Варшава, 2025-2026.")
+    await message.answer("🧪 Запускаю тестовый соляр: Анна, 25.10.1992 04:00, Холмск → Варшава, 2026-2027.")
     await _run_solar_analysis(message, message.from_user, state)
 
 
