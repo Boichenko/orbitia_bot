@@ -1037,17 +1037,7 @@ p {
 }
 
 .heatmap-card::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(circle at 76% 58%, rgba(245, 239, 223, .22), transparent 1.1mm),
-    linear-gradient(105deg,
-      rgba(166, 130, 66, .72) 0%,
-      rgba(132, 89, 78, .66) 48%,
-      rgba(86, 55, 103, .68) 76%,
-      rgba(53, 34, 86, .78) 100%);
-  opacity: var(--heat-opacity);
+  content: none;
 }
 
 .heatmap-card h3 {

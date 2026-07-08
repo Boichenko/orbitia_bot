@@ -161,10 +161,10 @@ def _heatmap_cards(report: dict, fallback_cards: list[dict]) -> str:
             continue
         title = item.get("title") or item.get("sphere") or item.get("name")
         score = _score(item.get("score") or item.get("level"), 5)
-        opacity = score / 10
+        background = _heatmap_background(score)
         cards.append(
             f"""
-            <article class="heatmap-card" style="--heat-opacity:{opacity:.2f}">
+            <article class="heatmap-card" style="{background}">
               <h3>{_safe(title)}</h3>
               <strong>{score}<span>/10</span></strong>
             </article>
@@ -172,6 +172,25 @@ def _heatmap_cards(report: dict, fallback_cards: list[dict]) -> str:
         )
 
     return "".join(cards)
+
+
+def _heatmap_background(score: int) -> str:
+    density = max(0.1, min(score / 10, 1))
+    gold = 0.18 + density * 0.52
+    rose = 0.14 + density * 0.38
+    violet = 0.18 + density * 0.44
+    deep = 0.24 + density * 0.34
+    spark = 0.04 + density * 0.12
+    return (
+        "background:"
+        f"radial-gradient(circle at 76% 58%, rgba(245, 239, 223, {spark:.2f}), transparent 1.1mm),"
+        "linear-gradient(105deg,"
+        f"rgba(166, 130, 66, {gold:.2f}) 0%,"
+        f"rgba(119, 82, 77, {rose:.2f}) 46%,"
+        f"rgba(78, 48, 102, {violet:.2f}) 76%,"
+        f"rgba(39, 26, 64, {deep:.2f}) 100%),"
+        "rgba(23, 18, 37, .52);"
+    )
 
 
 def _radar_svg(cards: list[dict]) -> str:
