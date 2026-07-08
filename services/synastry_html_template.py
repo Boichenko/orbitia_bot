@@ -51,6 +51,7 @@ def render_synastry_html(report: dict) -> str:
         "EMOTIONS_SUMMARY": _safe(emotions.get("summary")),
         "EMOTIONS_SUPPORT": _list_items(emotions.get("support"), 3),
         "EMOTIONS_MISMATCH": _list_items(emotions.get("mismatch"), 3),
+        "EMOTIONS_FACTORS": _factor_cards(emotions.get("factors")),
         "CHEMISTRY_SCORE": str(chemistry_score),
         "CHEMISTRY_FILL": str(chemistry_score * 10),
         "CHEMISTRY_LABEL": _safe(chemistry.get("label"), "Притяжение"),
@@ -58,19 +59,24 @@ def render_synastry_html(report: dict) -> str:
         "CHEMISTRY_AMPLIFIES": _list_items(chemistry.get("amplifies"), 3),
         "CHEMISTRY_DIMS": _list_items(chemistry.get("dims"), 3),
         "CHEMISTRY_PARAMETERS": _value_bars(chemistry.get("parameters"), 4),
+        "CHEMISTRY_FACTORS": _factor_cards(chemistry.get("factors")),
         "FIRST_LOVE_NAME": _safe(first_love.get("name"), "Первый партнёр"),
         "FIRST_LOVE_ITEMS": _love_items(first_love.get("items")),
         "PARTNER_LOVE_NAME": _safe(partner_love.get("name"), "Партнёр"),
         "PARTNER_LOVE_ITEMS": _love_items(partner_love.get("items")),
         "LOVE_BRIDGE": _safe(love.get("bridge"), "переводить ожидания в слова"),
         "LOVE_SUMMARY": _safe(love.get("summary")),
+        "LOVE_TRANSLATIONS": _translation_rows(love.get("translations")),
         "COMMUNICATION_SUMMARY": _safe(communication.get("summary")),
         "TRANSLATOR_ROWS": _translator_rows(communication.get("rows")),
+        "COMMUNICATION_MISTAKES": _mistake_cards(communication.get("mistakes")),
         "TRIGGER_CARDS": _trigger_cards(report.get("triggers")),
+        "CONFLICT_MECHANICS": _mechanics_steps(report.get("conflict_mechanics")),
         "LONGTERM_SCORE": str(longterm_score),
         "LONGTERM_SUMMARY": _safe(longterm.get("summary")),
         "LONGTERM_PILLARS": _pillars(longterm.get("pillars")),
         "LONGTERM_WEAK_SPOT": _safe(longterm.get("weak_spot")),
+        "LONGTERM_PERIODS": _period_cards(longterm.get("periods")),
         "FIRST_INFLUENCE_TITLE": _safe(first_influence.get("title")),
         "FIRST_INFLUENCE_ITEMS": _list_items(first_influence.get("items"), 4),
         "PARTNER_INFLUENCE_TITLE": _safe(partner_influence.get("title")),
@@ -300,6 +306,86 @@ def _translator_rows(items) -> str:
         </div>
         """
         for item in items[:4]
+        if isinstance(item, dict)
+    )
+
+
+def _translation_rows(items) -> str:
+    if not isinstance(items, list):
+        return ""
+    rows = []
+    for item in items[:4]:
+        if not isinstance(item, dict):
+            continue
+        rows.append(
+            f"""
+            <div class="translation-row">
+              <span>{_safe(item.get("action"))}</span>
+              <b>{_safe(item.get("need"))}</b>
+              <em>{_safe(item.get("translation"))}</em>
+            </div>
+            """
+        )
+    return "".join(rows)
+
+
+def _factor_cards(items) -> str:
+    if not isinstance(items, list):
+        return ""
+    cards = []
+    for item in items[:3]:
+        if not isinstance(item, dict):
+            continue
+        cards.append(
+            f"""
+            <article class="factor-card">
+              <small>{_safe(item.get("weight"))}</small>
+              <h3>{_safe(item.get("title"))}</h3>
+              <p>{_safe(item.get("text"))}</p>
+              <i>{_safe(item.get("astro_basis"))}</i>
+            </article>
+            """
+        )
+    return "".join(cards)
+
+
+def _mistake_cards(items) -> str:
+    if not isinstance(items, list):
+        return ""
+    return "".join(
+        f"""
+        <article>
+          <h3>{_safe(item.get("title"))}</h3>
+          <p>{_safe(item.get("text"))}</p>
+        </article>
+        """
+        for item in items[:2]
+        if isinstance(item, dict)
+    )
+
+
+def _mechanics_steps(items) -> str:
+    if not isinstance(items, list):
+        return ""
+    return "".join(
+        f"""
+        <li><span>{index}</span>{_safe(item)}</li>
+        """
+        for index, item in enumerate(items[:5], 1)
+    )
+
+
+def _period_cards(items) -> str:
+    if not isinstance(items, list):
+        return ""
+    return "".join(
+        f"""
+        <article>
+          <h3>{_safe(item.get("title"))}</h3>
+          <p>{_safe(item.get("text"))}</p>
+        </article>
+        """
+        for item in items[:3]
         if isinstance(item, dict)
     )
 
