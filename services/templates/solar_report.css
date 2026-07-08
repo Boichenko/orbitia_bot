@@ -1034,9 +1034,10 @@ p {
   background:
     radial-gradient(circle at 76% 58%, rgba(245, 239, 223, .24), transparent 1.2mm),
     linear-gradient(115deg,
-      rgba(214, 181, 109, var(--gold-alpha)) 0%,
-      rgba(214, 181, 109, .18) 22%,
-      rgba(122, 92, 255, var(--purple-alpha)) 100%);
+      rgba(214, 181, 109, .52) 0%,
+      rgba(134, 105, 74, .44) var(--heat),
+      rgba(122, 92, 255, .34) calc(var(--heat) + 8%),
+      rgba(55, 36, 92, .42) 100%);
 }
 
 .heatmap-card h3 {
