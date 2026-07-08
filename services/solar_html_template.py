@@ -175,21 +175,22 @@ def _heatmap_cards(report: dict, fallback_cards: list[dict]) -> str:
 
 
 def _heatmap_background(score: int) -> str:
+    def blend(top: tuple[int, int, int], alpha: float) -> str:
+        base = (23, 18, 37)
+        rgb = [round(base[index] * (1 - alpha) + top[index] * alpha) for index in range(3)]
+        return f"rgb({rgb[0]}, {rgb[1]}, {rgb[2]})"
+
     density = max(0.1, min(score / 10, 1))
-    gold = 0.18 + density * 0.52
-    rose = 0.14 + density * 0.38
-    violet = 0.18 + density * 0.44
-    deep = 0.24 + density * 0.34
-    spark = 0.04 + density * 0.12
+    gold = blend((166, 130, 66), 0.20 + density * 0.50)
+    rose = blend((119, 82, 77), 0.18 + density * 0.36)
+    violet = blend((78, 48, 102), 0.20 + density * 0.38)
+    deep = blend((39, 26, 64), 0.28 + density * 0.32)
     return (
-        "background:"
-        f"radial-gradient(circle at 76% 58%, rgba(245, 239, 223, {spark:.2f}), transparent 1.1mm),"
-        "linear-gradient(105deg,"
-        f"rgba(166, 130, 66, {gold:.2f}) 0%,"
-        f"rgba(119, 82, 77, {rose:.2f}) 46%,"
-        f"rgba(78, 48, 102, {violet:.2f}) 76%,"
-        f"rgba(39, 26, 64, {deep:.2f}) 100%),"
-        "rgba(23, 18, 37, .52);"
+        "background:linear-gradient(105deg,"
+        f"{gold} 0%,"
+        f"{rose} 46%,"
+        f"{violet} 76%,"
+        f"{deep} 100%);"
     )
 
 
