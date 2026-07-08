@@ -40,6 +40,7 @@ def render_synastry_html(report: dict) -> str:
         "MAIN_RISK": _safe(cover.get("main_risk")),
         "OVERALL_SCORE": str(overall),
         "SCORE_WORDS": _word_chips(cover.get("score_words")),
+        "COVER_METRICS": _cover_metrics(cards),
         "MAP_ROWS": _map_rows(cards),
         "RADAR_SVG": _radar_svg(cards),
         "FORMULA_TITLE": _safe(formula.get("title"), "Формула пары"),
@@ -141,6 +142,26 @@ def _word_chips(items) -> str:
     if not isinstance(items, list):
         return ""
     return "".join(f"<span>{_safe(item)}</span>" for item in items[:3])
+
+
+def _cover_metrics(cards: list[dict]) -> str:
+    priority = ["chemistry", "emotions", "communication", "longterm"]
+    selected = []
+    for key in priority:
+        card = next((item for item in cards if item.get("key") == key), None)
+        if card:
+            selected.append(card)
+    if len(selected) < 4:
+        selected.extend(cards[: 4 - len(selected)])
+    return "".join(
+        f"""
+        <article>
+          <span>{_safe(card.get("title"))}</span>
+          <b>{_score(card.get("score"))}/10</b>
+        </article>
+        """
+        for card in selected[:4]
+    )
 
 
 def _map_rows(cards: list[dict]) -> str:

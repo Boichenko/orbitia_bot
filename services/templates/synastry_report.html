@@ -8,123 +8,165 @@
 </head>
 <body>
   <section class="page cover-page">
+    <div class="cover-line"><span></span><b>Синастрия · разбор пары</b></div>
     <div class="cover-copy">
-      <div class="section-kicker">Синастрия · разбор пары</div>
       <h1>{{COVER_TITLE}}</h1>
-      <p>{{COVER_SUBTITLE}}</p>
+      <p class="cover-subtitle">{{COVER_SUBTITLE}}</p>
+      <p class="cover-intro">
+        Это не абстрактный прогноз, а карта отношений в человеческих категориях:
+        почему тянет, где болит, есть ли будущее и что делать в быту. Мы смотрим
+        на пару как на систему: где она сильна, где хрупка и что требует внимания обоих.
+      </p>
       <dl class="cover-meta">
+        <div><dt>Общая совместимость</dt><dd>{{OVERALL_SCORE}}<span>/10</span></dd></div>
         <div><dt>Тип связи</dt><dd>{{CONNECTION_TYPE}}</dd></div>
         <div><dt>Главный ресурс</dt><dd>{{MAIN_RESOURCE}}</dd></div>
         <div><dt>Главный риск</dt><dd>{{MAIN_RISK}}</dd></div>
-        <div><dt>Совместимость</dt><dd>{{OVERALL_SCORE}}<span>/10</span></dd></div>
       </dl>
-    </div>
-    <div class="score-orb">
-      <b>{{OVERALL_SCORE}}<span>/10</span></b>
-      <div>{{SCORE_WORDS}}</div>
+      <div class="metric-strip">{{COVER_METRICS}}</div>
+      <div class="word-strip">{{SCORE_WORDS}}</div>
     </div>
   </section>
 
   <section class="page map-page">
-    <div class="section-head"><span>01</span><b>Карта отношений</b></div>
-    <div class="map-grid">
-      <div>
-        <h2>Совместимость в одном экране</h2>
-        <p class="lead">Радар показывает, где у пары больше ресурса, напряжения и событийной плотности. Чем выше балл, тем активнее тема в динамике отношений.</p>
-        <div class="score-list">{{MAP_ROWS}}</div>
+    <div class="section-head"><span>01</span><b>Быстрая карта отношений</b></div>
+    <div class="card-surface map-surface">
+      <div class="map-grid">
+        <div>
+          <h2>Колесо совместимости</h2>
+          <p class="lead">
+            Одна картинка показывает, где пара сильна, где ей легко, а где нужно
+            вкладываться в ясность. Чем ближе к краю - тем ярче проявлена сфера.
+          </p>
+          <div class="score-list">{{MAP_ROWS}}</div>
+        </div>
+        <div class="radar-card">{{RADAR_SVG}}</div>
       </div>
-      <div class="radar-card">{{RADAR_SVG}}</div>
+      <div class="insight-grid">
+        <article><h3>Что видно сразу</h3><p>Сильные пики показывают ресурс пары, низкие точки - не приговор, а зоны навыка и договорённостей.</p></article>
+        <article><h3>Куда смотреть</h3><p>Усиливать нужно не только то, что приятно, а то, где пара чаще теряет контакт: слова, ритм, границы.</p></article>
+        <article><h3>Прогноз</h3><p>Высокий потенциал раскрывается через зрелую коммуникацию, а не через попытку угадать партнёра без слов.</p></article>
+      </div>
     </div>
   </section>
 
   <section class="page formula-page">
-    <div class="section-head"><span>02</span><b>Формула пары</b></div>
-    <article class="formula-card">
+    <div class="section-head"><span>02</span><b>Главная формула связи</b></div>
+    <article class="card-surface formula-card">
       <div class="section-kicker">{{FORMULA_TITLE}}</div>
       <h2>{{FORMULA_PHRASE}}</h2>
       <p>{{FORMULA_TEXT}}</p>
       <div class="bar-grid">{{FORMULA_BARS}}</div>
+      <blockquote>
+        Это связь, где всё работает крупно: притяжение, рост, страхи и желание быть ближе.
+        Главный вопрос пары - выдерживать интенсивность и переводить ожидания в слова.
+      </blockquote>
     </article>
   </section>
 
   <section class="page detail-page">
-    <div class="section-head"><span>03</span><b>Эмоции</b></div>
-    <div class="two-col">
-      <div class="emotion-panel">{{EMOTION_SCALES}}</div>
-      <div>
-        <h2>Эмоциональная совместимость</h2>
-        <p class="lead">{{EMOTIONS_SUMMARY}}</p>
-        <div class="copy-grid">
-          <article><h3>Где есть поддержка</h3><ul>{{EMOTIONS_SUPPORT}}</ul></article>
-          <article><h3>Где несовпадение</h3><ul>{{EMOTIONS_MISMATCH}}</ul></article>
+    <div class="section-head"><span>03</span><b>Эмоциональная совместимость</b></div>
+    <div class="card-surface content-card">
+      <div class="two-col reverse">
+        <div>
+          <h2>Как они чувствуют друг друга</h2>
+          <p class="lead">{{EMOTIONS_SUMMARY}}</p>
+          <div class="copy-grid">
+            <article><h3>Где есть поддержка</h3><ul>{{EMOTIONS_SUPPORT}}</ul></article>
+            <article><h3>Где несовпадение</h3><ul>{{EMOTIONS_MISMATCH}}</ul></article>
+          </div>
         </div>
+        <div class="emotion-panel">{{EMOTION_SCALES}}</div>
       </div>
     </div>
   </section>
 
   <section class="page detail-page">
-    <div class="section-head"><span>04</span><b>Химия</b></div>
-    <div class="two-col">
-      <div class="chemistry-card">
-        <div class="chem-score">{{CHEMISTRY_SCORE}}<span>/10</span></div>
-        <div class="battery" style="--fill:{{CHEMISTRY_FILL}}%"><i>{{CHEMISTRY_LABEL}}</i></div>
-        <div class="bar-grid compact">{{CHEMISTRY_PARAMETERS}}</div>
-      </div>
-      <div>
-        <h2>Химия, секс и притяжение</h2>
-        <p class="lead">{{CHEMISTRY_SUMMARY}}</p>
-        <div class="copy-grid">
-          <article><h3>Что усиливает</h3><ul>{{CHEMISTRY_AMPLIFIES}}</ul></article>
-          <article><h3>Что гасит</h3><ul>{{CHEMISTRY_DIMS}}</ul></article>
+    <div class="section-head"><span>04</span><b>Химия, секс и притяжение</b></div>
+    <div class="card-surface content-card">
+      <div class="two-col">
+        <div class="chemistry-card">
+          <div class="section-kicker">Chemistry meter</div>
+          <div class="chem-score">{{CHEMISTRY_SCORE}}<span>/10</span></div>
+          <div class="battery" style="--fill:{{CHEMISTRY_FILL}}%"><i>{{CHEMISTRY_LABEL}}</i></div>
+          <div class="bar-grid compact">{{CHEMISTRY_PARAMETERS}}</div>
+        </div>
+        <div>
+          <h2>Магнитное притяжение</h2>
+          <p class="lead">{{CHEMISTRY_SUMMARY}}</p>
+          <div class="copy-grid">
+            <article><h3>Что усиливает</h3><ul>{{CHEMISTRY_AMPLIFIES}}</ul></article>
+            <article><h3>Что гасит</h3><ul>{{CHEMISTRY_DIMS}}</ul></article>
+          </div>
         </div>
       </div>
     </div>
   </section>
 
   <section class="page bridge-page">
-    <div class="section-head"><span>05</span><b>Языки любви</b></div>
-    <h2>Как переводить любовь</h2>
-    <div class="love-bridge">
-      <article><h3>{{FIRST_LOVE_NAME}}</h3>{{FIRST_LOVE_ITEMS}}</article>
-      <div class="bridge-word">{{LOVE_BRIDGE}}</div>
-      <article><h3>{{PARTNER_LOVE_NAME}}</h3>{{PARTNER_LOVE_ITEMS}}</article>
+    <div class="section-head"><span>05</span><b>Любовь и языки привязанности</b></div>
+    <div class="card-surface content-card">
+      <h2>Разные языки любви</h2>
+      <p class="lead">
+        Каждый любит по-своему. Пока партнёры не проговаривают ожидания вслух,
+        жесты любви одного могут не считываться другим как любовь.
+      </p>
+      <div class="love-bridge">
+        <article><h3>{{FIRST_LOVE_NAME}}</h3>{{FIRST_LOVE_ITEMS}}</article>
+        <div class="bridge-word">{{LOVE_BRIDGE}}</div>
+        <article><h3>{{PARTNER_LOVE_NAME}}</h3>{{PARTNER_LOVE_ITEMS}}</article>
+      </div>
+      <p class="wide-copy">{{LOVE_SUMMARY}}</p>
     </div>
-    <p class="wide-copy">{{LOVE_SUMMARY}}</p>
   </section>
 
   <section class="page communication-page">
-    <div class="section-head"><span>06</span><b>Коммуникация</b></div>
-    <h2>Переводчик пары</h2>
-    <p class="lead">{{COMMUNICATION_SUMMARY}}</p>
-    <div class="translator">{{TRANSLATOR_ROWS}}</div>
+    <div class="section-head"><span>06</span><b>Коммуникация и понимание</b></div>
+    <div class="card-surface content-card">
+      <h2>Переводчик пары</h2>
+      <p class="lead">{{COMMUNICATION_SUMMARY}}</p>
+      <div class="translator">{{TRANSLATOR_ROWS}}</div>
+      <blockquote>
+        Правило пары: если возникло чувство "он/она меня не понимает" - скорее всего,
+        это ещё не было сказано достаточно прямо.
+      </blockquote>
+    </div>
   </section>
 
   <section class="page trigger-page">
-    <div class="section-head"><span>07</span><b>Триггеры</b></div>
-    <h2>Где возникают конфликты</h2>
-    <div class="trigger-grid">{{TRIGGER_CARDS}}</div>
+    <div class="section-head"><span>07</span><b>Конфликты и триггеры</b></div>
+    <div class="card-surface content-card">
+      <h2>Точки напряжения</h2>
+      <p class="lead">
+        Триггеры - это не плохие черты, а места, где два разных устройства психики
+        сталкиваются. Задача - распознавать их раньше, чем они разгоняются в ссору.
+      </p>
+      <div class="trigger-grid">{{TRIGGER_CARDS}}</div>
+    </div>
   </section>
 
   <section class="page longterm-page">
-    <div class="section-head"><span>08</span><b>Долгосрочность</b></div>
-    <div class="two-col">
-      <div class="foundation-card">
-        <div class="foundation-score">{{LONGTERM_SCORE}}<span>/10</span></div>
-        <div class="pillar-row">{{LONGTERM_PILLARS}}</div>
-        <div class="foundation-base">готовность строить</div>
-      </div>
-      <div>
-        <h2>Фундамент отношений</h2>
-        <p class="lead">{{LONGTERM_SUMMARY}}</p>
-        <p class="weak-note">Слабое место: {{LONGTERM_WEAK_SPOT}}</p>
+    <div class="section-head"><span>08</span><b>Долгосрочный потенциал</b></div>
+    <div class="card-surface content-card">
+      <div class="two-col">
+        <div class="foundation-card">
+          <div class="section-kicker">Профиль устойчивости</div>
+          <div class="foundation-score">{{LONGTERM_SCORE}}<span>/10</span></div>
+          <div class="pillar-row">{{LONGTERM_PILLARS}}</div>
+          <div class="foundation-base">готовность строить</div>
+        </div>
+        <div>
+          <h2>Фундамент отношений</h2>
+          <p class="lead">{{LONGTERM_SUMMARY}}</p>
+          <p class="weak-note">Слабое место: {{LONGTERM_WEAK_SPOT}}</p>
+        </div>
       </div>
     </div>
   </section>
 
   <section class="page influence-page">
-    <div class="section-head"><span>09</span><b>Влияние</b></div>
-    <h2>Два направления влияния</h2>
-    <div class="influence-card">
+    <div class="section-head"><span>09</span><b>Как партнёры влияют друг на друга</b></div>
+    <div class="card-surface influence-card">
       <article><h3>{{FIRST_INFLUENCE_TITLE}}</h3><ul>{{FIRST_INFLUENCE_ITEMS}}</ul></article>
       <div class="arrows"><span>→</span><span>←</span></div>
       <article><h3>{{PARTNER_INFLUENCE_TITLE}}</h3><ul>{{PARTNER_INFLUENCE_ITEMS}}</ul></article>
@@ -132,25 +174,26 @@
   </section>
 
   <section class="page summary-page">
-    <div class="section-head"><span>10</span><b>Ресурсы</b></div>
-    <h2>На что опираться в паре</h2>
+    <div class="section-head"><span>10</span><b>Главные ресурсы пары</b></div>
     <div class="resource-grid">{{RESOURCE_CARDS}}</div>
   </section>
 
   <section class="page summary-page">
-    <div class="section-head"><span>11</span><b>Риски</b></div>
-    <h2>Где нужна осторожность</h2>
+    <div class="section-head"><span>11</span><b>Главные риски пары</b></div>
     <div class="risk-grid">{{RISK_CARDS}}</div>
   </section>
 
   <section class="page recommendation-page">
-    <div class="section-head"><span>12</span><b>Практика</b></div>
-    <h2>Что делать, если...</h2>
-    <div class="rec-list">{{RECOMMENDATIONS}}</div>
+    <div class="section-head"><span>12</span><b>Практические рекомендации</b></div>
+    <div class="card-surface content-card">
+      <h2>Что делать, если...</h2>
+      <div class="rec-list">{{RECOMMENDATIONS}}</div>
+    </div>
   </section>
 
   <section class="page final-page">
-    <article class="final-card">
+    <div class="section-head"><span>13</span><b>Итоговая формула</b></div>
+    <article class="card-surface final-card">
       <div class="section-kicker">{{FINAL_TITLE}}</div>
       <h2>{{FINAL_TEXT}}</h2>
       <div class="final-grid">

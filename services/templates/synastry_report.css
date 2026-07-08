@@ -9,7 +9,7 @@
 
 body {
   margin: 0;
-  background: #171225;
+  background: #120f20;
   color: rgba(245, 239, 223, .82);
   font-family: Manrope, DejaVu Sans, Arial, sans-serif;
 }
@@ -33,12 +33,12 @@ p {
   width: 210mm;
   height: 297mm;
   overflow: hidden;
-  padding: 18mm;
+  padding: 18mm 18mm 16mm;
   page-break-after: always;
   background:
-    radial-gradient(circle at 86% 12%, rgba(122, 92, 255, .18), transparent 34%),
-    radial-gradient(circle at 7% 91%, rgba(214, 181, 109, .11), transparent 30%),
-    #171225;
+    radial-gradient(circle at 86% 9%, rgba(122, 92, 255, .16), transparent 32%),
+    radial-gradient(circle at 6% 92%, rgba(214, 181, 109, .10), transparent 30%),
+    linear-gradient(180deg, #171225 0%, #100e1b 100%);
 }
 
 .page:last-child {
@@ -49,8 +49,8 @@ p {
   content: "";
   position: absolute;
   inset: 7mm;
-  border: 1px solid rgba(214, 181, 109, .16);
-  border-radius: 9mm;
+  border: 1px solid rgba(214, 181, 109, .13);
+  border-radius: 10mm;
   pointer-events: none;
 }
 
@@ -72,7 +72,7 @@ p {
   display: flex;
   align-items: center;
   gap: 4mm;
-  margin-bottom: 10mm;
+  margin-bottom: 11mm;
 }
 
 .section-head::after {
@@ -92,36 +92,64 @@ p {
 }
 
 .cover-page {
-  display: grid;
-  grid-template-columns: 1.25fr .75fr;
-  gap: 14mm;
+  display: block;
+  padding: 24mm 20mm;
+}
+
+.cover-line {
+  display: flex;
   align-items: center;
+  gap: 3mm;
+  color: #d6b56d;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 3.4px;
+  text-transform: uppercase;
+}
+
+.cover-line span {
+  width: 9mm;
+  height: 1px;
+  background: #d6b56d;
 }
 
 .cover-copy h1 {
-  max-width: 124mm;
-  margin-top: 7mm;
-  font-size: 52px;
-  line-height: .98;
+  max-width: 160mm;
+  margin-top: 14mm;
+  color: #f5efdf;
+  font-size: 60px;
+  font-weight: 500;
+  line-height: 1.03;
 }
 
-.cover-copy p {
-  max-width: 112mm;
+.cover-subtitle {
+  max-width: 130mm;
   margin-top: 7mm;
+  color: rgba(245, 239, 223, .74);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 21px;
+  font-style: italic;
+  line-height: 1.36;
+}
+
+.cover-intro {
+  max-width: 156mm;
+  margin-top: 8mm;
   color: rgba(245, 239, 223, .62);
-  font-size: 13.5px;
-  line-height: 1.48;
+  font-size: 13px;
+  line-height: 1.58;
 }
 
 .cover-meta {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 5mm;
-  margin: 14mm 0 0;
+  gap: 8mm 14mm;
+  margin: 18mm 0 0;
+  max-width: 160mm;
 }
 
 .cover-meta div {
-  min-height: 25mm;
+  min-height: 22mm;
   border-top: 1px solid rgba(214, 181, 109, .38);
   padding-top: 3.5mm;
 }
@@ -129,7 +157,7 @@ p {
 .cover-meta dd {
   margin: 2mm 0 0;
   color: #f5efdf;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 800;
   line-height: 1.28;
 }
@@ -138,48 +166,68 @@ p {
   color: rgba(245, 239, 223, .44);
 }
 
-.score-orb {
-  min-height: 96mm;
-  border: 1px solid rgba(214, 181, 109, .24);
-  border-radius: 10mm;
+.metric-strip {
   display: grid;
-  place-items: center;
-  padding: 11mm;
-  background: rgba(255, 255, 255, .025);
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4mm;
+  margin-top: 17mm;
 }
 
-.score-orb b {
-  width: 48mm;
-  height: 48mm;
-  border: 1.4mm solid #d6b56d;
-  border-radius: 50%;
-  display: flex;
-  align-items: baseline;
-  justify-content: center;
-  gap: 1mm;
+.metric-strip article {
+  border: 1px solid rgba(245, 239, 223, .06);
+  border-radius: 5mm;
+  padding: 5mm;
+  text-align: center;
+  background: rgba(245, 239, 223, .025);
+}
+
+.metric-strip span {
+  display: block;
+  color: rgba(245, 239, 223, .55);
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  line-height: 1.25;
+  text-transform: uppercase;
+}
+
+.metric-strip b {
+  display: block;
+  margin-top: 2mm;
   color: #d6b56d;
-  font-size: 29px;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 21px;
+  font-weight: 500;
 }
 
-.score-orb b span {
-  color: rgba(245, 239, 223, .45);
-  font-size: 18px;
-}
-
-.score-orb div {
+.word-strip {
   display: flex;
   flex-wrap: wrap;
-  justify-content: center;
   gap: 2mm;
+  margin-top: 9mm;
 }
 
-.score-orb div span,
+.word-strip span,
 .love-bridge article span {
   border: 1px solid rgba(214, 181, 109, .25);
   border-radius: 999px;
   padding: 1.6mm 3mm;
   color: #d6b56d;
   font-size: 9px;
+}
+
+.card-surface {
+  border: 1px solid rgba(245, 239, 223, .075);
+  border-radius: 8mm;
+  background: linear-gradient(180deg, rgba(43, 36, 64, .64), rgba(23, 18, 37, .72));
+}
+
+.content-card {
+  padding: 10mm;
+}
+
+.map-surface {
+  padding: 10mm;
 }
 
 .map-grid {
@@ -211,6 +259,36 @@ p {
   line-height: 1.48;
 }
 
+.insight-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4mm;
+  margin-top: 9mm;
+}
+
+.insight-grid article {
+  border: 1px solid rgba(245, 239, 223, .055);
+  border-radius: 5mm;
+  padding: 5mm;
+  background: rgba(245, 239, 223, .022);
+}
+
+.insight-grid h3 {
+  margin-bottom: 2mm;
+  color: #d6b56d;
+  font-family: Manrope, DejaVu Sans, Arial, sans-serif;
+  font-size: 8.2px;
+  font-weight: 800;
+  letter-spacing: 2.4px;
+  text-transform: uppercase;
+}
+
+.insight-grid p {
+  color: rgba(245, 239, 223, .67);
+  font-size: 10.2px;
+  line-height: 1.42;
+}
+
 .score-list {
   margin-top: 10mm;
 }
@@ -236,7 +314,6 @@ p {
 }
 
 .radar-card,
-.formula-card,
 .emotion-panel,
 .chemistry-card,
 .love-bridge,
@@ -257,12 +334,13 @@ p {
   min-height: 118mm;
   display: grid;
   place-items: center;
-  overflow: hidden;
+  overflow: visible;
+  background: rgba(14, 12, 24, .32);
 }
 
 .radar-svg {
-  width: 84mm;
-  height: 84mm;
+  width: 76mm;
+  height: 76mm;
   overflow: visible;
 }
 
@@ -296,7 +374,7 @@ p {
 }
 
 .formula-card {
-  margin-top: 18mm;
+  margin-top: 14mm;
   padding: 14mm;
 }
 
@@ -313,6 +391,17 @@ p {
   color: rgba(245, 239, 223, .68);
   font-size: 14px;
   line-height: 1.48;
+}
+
+blockquote {
+  margin: 9mm 0 0;
+  border-left: 1.3mm solid #d6b56d;
+  padding: 4mm 0 4mm 6mm;
+  color: rgba(245, 239, 223, .70);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 15px;
+  font-style: italic;
+  line-height: 1.45;
 }
 
 .bar-grid {
@@ -354,20 +443,26 @@ p {
   align-items: start;
 }
 
+.two-col.reverse {
+  grid-template-columns: 1fr 82mm;
+}
+
 .emotion-panel {
-  min-height: 84mm;
+  min-height: 78mm;
   display: flex;
   align-items: end;
   justify-content: space-between;
-  gap: 3mm;
-  padding: 8mm;
+  gap: 1.4mm;
+  padding: 7mm 5mm;
+  background: rgba(14, 12, 24, .28);
 }
 
 .emotion-col {
   display: grid;
+  flex: 1;
   justify-items: center;
   gap: 2mm;
-  width: 100%;
+  min-width: 0;
 }
 
 .emotion-col b {
@@ -398,8 +493,9 @@ p {
 
 .emotion-col span {
   color: rgba(245, 239, 223, .58);
-  font-size: 8.2px;
-  line-height: 1.2;
+  font-size: 6.6px;
+  line-height: 1.1;
+  max-width: 13mm;
   text-align: center;
 }
 
@@ -412,19 +508,35 @@ p {
 
 .copy-grid article {
   min-height: 42mm;
+  border: 1px solid rgba(245, 239, 223, .055);
+  border-radius: 5mm;
+  padding: 5mm;
+  background: rgba(245, 239, 223, .022);
 }
 
 ul {
   margin: 0;
-  padding-left: 4mm;
+  padding-left: 0;
   color: rgba(245, 239, 223, .66);
   font-size: 10.5px;
   line-height: 1.42;
+  list-style: none;
+}
+
+li {
+  margin-bottom: 1.5mm;
+}
+
+li::before {
+  content: "·";
+  margin-right: 2mm;
+  color: #d6b56d;
 }
 
 .chemistry-card {
   min-height: 84mm;
   padding: 8mm;
+  background: rgba(14, 12, 24, .28);
 }
 
 .chem-score,
@@ -464,7 +576,9 @@ ul {
   width: var(--fill);
   height: 100%;
   border-radius: 3mm;
-  display: grid;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   place-items: center;
   background: linear-gradient(90deg, rgba(122, 92, 255, .82), rgba(214, 181, 109, .88));
   color: #171225;
@@ -480,6 +594,7 @@ ul {
   align-items: center;
   margin-top: 12mm;
   padding: 9mm;
+  background: rgba(14, 12, 24, .28);
 }
 
 .love-bridge article {
@@ -531,6 +646,7 @@ ul {
   gap: 4mm;
   margin-top: 12mm;
   padding: 9mm;
+  background: rgba(14, 12, 24, .28);
 }
 
 .translator-row {
@@ -566,8 +682,9 @@ ul {
 .trigger-card,
 .resource-card,
 .risk-card {
-  min-height: 39mm;
-  padding: 5mm;
+  min-height: 40mm;
+  padding: 6mm;
+  background: rgba(245, 239, 223, .022);
 }
 
 .trigger-card header {
@@ -614,6 +731,7 @@ ul {
 .foundation-card {
   min-height: 88mm;
   padding: 8mm;
+  background: rgba(14, 12, 24, .28);
 }
 
 .pillar-row {
@@ -691,7 +809,9 @@ ul {
 }
 
 .risk-card {
-  background: linear-gradient(90deg, rgba(122, 92, 255, .26), rgba(255, 255, 255, .025) var(--level));
+  background:
+    linear-gradient(90deg, rgba(122, 92, 255, .22), rgba(214, 181, 109, .10) var(--level), rgba(245, 239, 223, .025)),
+    rgba(245, 239, 223, .018);
 }
 
 .risk-card small {
@@ -714,6 +834,7 @@ ul {
   gap: 5mm;
   align-items: center;
   padding: 5mm;
+  background: rgba(245, 239, 223, .022);
 }
 
 .rec-row > b {
@@ -728,7 +849,7 @@ ul {
 
 .final-card {
   max-width: 158mm;
-  margin: 28mm auto 0;
+  margin: 20mm auto 0;
   padding: 14mm;
   text-align: center;
 }
