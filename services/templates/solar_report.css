@@ -1035,8 +1035,9 @@ p {
     radial-gradient(circle at 76% 58%, rgba(245, 239, 223, .22), transparent 1.1mm),
     linear-gradient(105deg,
       rgba(166, 130, 66, var(--warm)) 0%,
-      rgba(122, 84, 84, .64) var(--gold-mid),
-      rgba(82, 52, 103, .72) 100%);
+      rgba(132, 89, 78, .66) var(--gold-end),
+      rgba(86, 55, 103, .68) var(--blend-end),
+      rgba(53, 34, 86, var(--violet)) 100%);
 }
 
 .heatmap-card h3 {

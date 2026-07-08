@@ -161,12 +161,13 @@ def _heatmap_cards(report: dict, fallback_cards: list[dict]) -> str:
             continue
         title = item.get("title") or item.get("sphere") or item.get("name")
         score = _score(item.get("score") or item.get("level"), 5)
-        intensity = max(0, min(100, score * 10))
-        warm_alpha = .24 + intensity / 320
-        gold_mid = 24 + int(intensity * .30)
+        gold_end = 20 + score * 6
+        blend_end = min(96, gold_end + 16)
+        warm_alpha = .32 + score * .045
+        violet_alpha = .82 - score * .025
         cards.append(
             f"""
-            <article class="heatmap-card" style="--warm:{warm_alpha:.2f}; --gold-mid:{gold_mid}%">
+            <article class="heatmap-card" style="--warm:{warm_alpha:.2f}; --violet:{violet_alpha:.2f}; --gold-end:{gold_end}%; --blend-end:{blend_end}%">
               <h3>{_safe(title)}</h3>
               <strong>{score}<span>/10</span></strong>
             </article>
