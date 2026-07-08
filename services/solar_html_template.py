@@ -284,6 +284,7 @@ def _category_pages(report: dict) -> str:
 
 def _category_page(category: dict, key: str) -> str:
     score = _score(category.get("score"))
+    main_takeaway = _category_takeaway(category)
     return f"""
     <section class="page category-page">
       <div class="category-shell">
@@ -317,7 +318,7 @@ def _category_page(category: dict, key: str) -> str:
         <div class="category-focus">
           <article>
             <div class="block-title">Главный вывод</div>
-            <p>{_safe(category.get("summary"))}</p>
+            <p>{_safe(main_takeaway)}</p>
           </article>
           <article>
             <div class="block-title">Практическая опора</div>
@@ -327,6 +328,27 @@ def _category_page(category: dict, key: str) -> str:
       </div>
     </section>
     """
+
+
+def _category_takeaway(category: dict) -> str:
+    value = category.get("main_takeaway")
+    summary = category.get("summary")
+    if value and value != summary:
+        return str(value)
+
+    amplified = _first_item(category.get("amplified"))
+    risk = _first_item(category.get("risks"))
+    action = _first_item(category.get("actions"))
+    pieces = []
+    if amplified:
+        pieces.append(f"Главный ресурс здесь - {amplified.rstrip('.')}.")
+    if risk:
+        pieces.append(f"Зона внимания - {risk.rstrip('.')}.")
+    if action:
+        pieces.append(f"Опора года - {action.rstrip('.')}.")
+    if pieces:
+        return " ".join(pieces)
+    return summary or "Эта сфера показывает, где важно соединить активность, честность с собой и конкретное действие."
 
 
 def _category_visual(key: str, score: int, category: dict | None = None) -> str:
