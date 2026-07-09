@@ -721,13 +721,7 @@ async def show_confirmation(answer_target, state: FSMContext) -> None:
 
     buttons = [
         [InlineKeyboardButton(text="✅ Всё верно, считать!", callback_data="confirm:go")],
-        [InlineKeyboardButton(text="✏️ Имя", callback_data="edit:name")],
-        [InlineKeyboardButton(text="✏️ Дата рождения", callback_data="edit:birth_date")],
-        [InlineKeyboardButton(text="✏️ Время рождения", callback_data="edit:birth_time")],
-        [InlineKeyboardButton(text="✏️ Место рождения", callback_data="edit:birth_place")],
-        [InlineKeyboardButton(text="✏️ Место соляра", callback_data="edit:solar_place")],
-        [InlineKeyboardButton(text="✏️ Год расчёта", callback_data="edit:year")],
-        [InlineKeyboardButton(text="✏️ Контекст года", callback_data="edit:context")],
+        [InlineKeyboardButton(text="✏️ Поправить данные", callback_data="confirm:edit")],
     ]
     kb = InlineKeyboardMarkup(inline_keyboard=buttons)
     await answer_target.answer(text, reply_markup=kb)
@@ -754,6 +748,49 @@ async def show_synastry_confirmation(answer_target, state: FSMContext) -> None:
 
     buttons = [
         [InlineKeyboardButton(text="✅ Всё верно, считать!", callback_data="confirm:go")],
+        [InlineKeyboardButton(text="✏️ Поправить данные", callback_data="confirm:edit")],
+    ]
+    kb = InlineKeyboardMarkup(inline_keyboard=buttons)
+    await answer_target.answer(text, reply_markup=kb)
+    await state.set_state(SolarStates.confirmation)
+
+
+@router.callback_query(SolarStates.confirmation, F.data == "confirm:edit")
+async def process_confirm_edit(callback: CallbackQuery, state: FSMContext):
+    await callback.answer()
+    data = await state.get_data()
+    if data.get("report_type") == "synastry":
+        await show_synastry_edit_options(callback.message)
+    else:
+        await show_solar_edit_options(callback.message)
+
+
+@router.callback_query(SolarStates.confirmation, F.data == "confirm:back")
+async def process_confirm_back(callback: CallbackQuery, state: FSMContext):
+    await callback.answer()
+    await callback.message.delete()
+    await show_confirmation(callback.message, state)
+
+
+async def show_solar_edit_options(message: Message) -> None:
+    buttons = [
+        [InlineKeyboardButton(text="✏️ Имя", callback_data="edit:name")],
+        [InlineKeyboardButton(text="✏️ Дата рождения", callback_data="edit:birth_date")],
+        [InlineKeyboardButton(text="✏️ Время рождения", callback_data="edit:birth_time")],
+        [InlineKeyboardButton(text="✏️ Место рождения", callback_data="edit:birth_place")],
+        [InlineKeyboardButton(text="✏️ Место соляра", callback_data="edit:solar_place")],
+        [InlineKeyboardButton(text="✏️ Год расчёта", callback_data="edit:year")],
+        [InlineKeyboardButton(text="✏️ Контекст года", callback_data="edit:context")],
+        [InlineKeyboardButton(text="⬅️ Назад к проверке", callback_data="confirm:back")],
+    ]
+    await message.edit_text(
+        "Что поправить в данных для соляра?",
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons),
+    )
+
+
+async def show_synastry_edit_options(message: Message) -> None:
+    buttons = [
         [InlineKeyboardButton(text="✏️ Твоё имя", callback_data="edit:name")],
         [InlineKeyboardButton(text="✏️ Твоя дата рождения", callback_data="edit:birth_date")],
         [InlineKeyboardButton(text="✏️ Твоё время рождения", callback_data="edit:birth_time")],
@@ -762,10 +799,12 @@ async def show_synastry_confirmation(answer_target, state: FSMContext) -> None:
         [InlineKeyboardButton(text="✏️ Дата рождения партнёра", callback_data="edit:partner_birth_date")],
         [InlineKeyboardButton(text="✏️ Время рождения партнёра", callback_data="edit:partner_birth_time")],
         [InlineKeyboardButton(text="✏️ Место рождения партнёра", callback_data="edit:partner_birth_place")],
+        [InlineKeyboardButton(text="⬅️ Назад к проверке", callback_data="confirm:back")],
     ]
-    kb = InlineKeyboardMarkup(inline_keyboard=buttons)
-    await answer_target.answer(text, reply_markup=kb)
-    await state.set_state(SolarStates.confirmation)
+    await message.edit_text(
+        "Что поправить в данных для синастрии?",
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons),
+    )
 
 
 @router.callback_query(SolarStates.confirmation, F.data.startswith("edit:"))
