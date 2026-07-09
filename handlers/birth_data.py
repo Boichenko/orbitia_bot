@@ -909,6 +909,8 @@ async def process_confirm_go(callback: CallbackQuery, state: FSMContext):
             inline_keyboard=[[InlineKeyboardButton(text=pay_button_text, pay=True)]]
         ),
     )
+    log_event(callback.from_user.id, "payment_invoice_sent")
+    log_event(callback.from_user.id, f"{report_type}_payment_invoice_sent")
 
 
 def _build_pre_payment_pitch(data: dict, report_type: str) -> str:
@@ -1030,16 +1032,21 @@ async def cmd_stats(message: Message):
     def count(event: str) -> int:
         return summary.get(event, 0)
 
+    def count_step(event: str | tuple[str, ...]) -> int:
+        if isinstance(event, tuple):
+            return max(summary.get(item, 0) for item in event)
+        return count(event)
+
     def pct(part: int, total: int) -> str:
         if total <= 0:
             return "—"
         return f"{part / total * 100:.0f}%"
 
-    def funnel_block(title: str, steps: list[tuple[str, str]]) -> list[str]:
+    def funnel_block(title: str, steps: list[tuple[str, str | tuple[str, ...]]]) -> list[str]:
         lines = [f"\n{title}:"]
         previous_value: Optional[int] = None
         for label, event in steps:
-            value = count(event)
+            value = count_step(event)
             if previous_value is None:
                 lines.append(f"{label}: {value}")
             else:
@@ -1057,8 +1064,9 @@ async def cmd_stats(message: Message):
         ("выбрали место соляра", "solar_place_entered"),
         ("добавили/пропустили контекст", "solar_context_done"),
         ("увидели подтверждение", "solar_confirmation_shown"),
-        ("дошли до оплаты", "solar_payment_started"),
-        ("оплатили", "solar_payment_success"),
+        ("нажали «Всё верно»", "solar_payment_started"),
+        ("увидели кнопку оплаты", ("solar_payment_invoice_sent", "solar_payment_started")),
+        ("успешно оплатили", "solar_payment_success"),
         ("получили файл", "solar_generated"),
     ]
     synastry_steps = [
@@ -1072,8 +1080,9 @@ async def cmd_stats(message: Message):
         ("ввели время рождения партнёра", "synastry_partner_birth_time_entered"),
         ("выбрали город рождения партнёра", "synastry_partner_birth_place_entered"),
         ("увидели подтверждение", "synastry_confirmation_shown"),
-        ("дошли до оплаты", "synastry_payment_started"),
-        ("оплатили", "synastry_payment_success"),
+        ("нажали «Всё верно»", "synastry_payment_started"),
+        ("увидели кнопку оплаты", ("synastry_payment_invoice_sent", "synastry_payment_started")),
+        ("успешно оплатили", "synastry_payment_success"),
         ("получили файл", "synastry_generated"),
     ]
 
@@ -1087,6 +1096,7 @@ async def cmd_stats(message: Message):
     lines.append(f"birth_date_entered: {count('birth_date_entered')}")
     lines.append(f"city_entered: {count('city_entered')}")
     lines.append(f"payment_started: {count('payment_started')}")
+    lines.append(f"payment_invoice_sent: {count('payment_invoice_sent')}")
     lines.append(f"payment_success: {count('payment_success')}")
 
     lines.append("\n📍 Источники (?start=...):")
