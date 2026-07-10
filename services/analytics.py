@@ -5,6 +5,8 @@
 Файл базы — analytics.db рядом с main.py. Никаких внешних сервисов не нужно.
 """
 
+from __future__ import annotations
+
 import os
 import sqlite3
 import time
@@ -90,6 +92,71 @@ def funnel_summary(source: str | None = None) -> dict[str, int]:
                 "SELECT event, COUNT(DISTINCT user_id) FROM events GROUP BY event"
             ).fetchall()
         return dict(rows)
+    finally:
+        conn.close()
+
+
+def count_users_with_events(events: tuple[str, ...], source: str | None = None) -> int:
+    if not events:
+        return 0
+
+    placeholders = ",".join("?" for _ in events)
+    params: list[object] = list(events)
+    source_join = ""
+    source_where = ""
+    if source is not None:
+        source_join = "JOIN users u ON u.user_id = e.user_id"
+        source_where = "AND u.source = ?"
+        params.append(source)
+
+    conn = _get_conn()
+    try:
+        row = conn.execute(
+            f"""
+            SELECT COUNT(*)
+            FROM (
+                SELECT e.user_id
+                FROM events e
+                {source_join}
+                WHERE e.event IN ({placeholders})
+                {source_where}
+                GROUP BY e.user_id
+                HAVING COUNT(DISTINCT e.event) = ?
+            ) matched_users
+            """,
+            (*params, len(events)),
+        ).fetchone()
+        return int(row[0] if row else 0)
+    finally:
+        conn.close()
+
+
+def count_users_with_any_event(events: tuple[str, ...], source: str | None = None) -> int:
+    if not events:
+        return 0
+
+    placeholders = ",".join("?" for _ in events)
+    params: list[object] = list(events)
+    source_join = ""
+    source_where = ""
+    if source is not None:
+        source_join = "JOIN users u ON u.user_id = e.user_id"
+        source_where = "AND u.source = ?"
+        params.append(source)
+
+    conn = _get_conn()
+    try:
+        row = conn.execute(
+            f"""
+            SELECT COUNT(DISTINCT e.user_id)
+            FROM events e
+            {source_join}
+            WHERE e.event IN ({placeholders})
+            {source_where}
+            """,
+            params,
+        ).fetchone()
+        return int(row[0] if row else 0)
     finally:
         conn.close()
 

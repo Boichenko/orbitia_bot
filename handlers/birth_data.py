@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import os
 import re
@@ -21,7 +23,13 @@ from aiogram.types import (
 )
 
 from handlers.start import start_flow
-from services.analytics import funnel_summary, list_sources, log_event
+from services.analytics import (
+    count_users_with_any_event,
+    count_users_with_events,
+    funnel_summary,
+    list_sources,
+    log_event,
+)
 from services.claude_client import interpret_solar_chart
 from services.geocoding import search_city
 from services.prompt_builder import (
@@ -129,6 +137,16 @@ def _log_report_event(user_id: int, data: dict, step: str) -> None:
         log_event(user_id, f"{report_type}_{step}")
 
 
+def _log_generated_event(user_id: int, data: dict, report_type: str) -> None:
+    log_event(user_id, f"{report_type}_generated")
+    if data.get("payment_confirmed"):
+        log_event(user_id, f"{report_type}_generated_after_payment")
+    elif data.get("is_test_report"):
+        log_event(user_id, f"{report_type}_generated_test")
+    else:
+        log_event(user_id, f"{report_type}_generated_free")
+
+
 # ---------------------------------------------------------------------------
 # Выбор типа разбора
 # ---------------------------------------------------------------------------
@@ -175,6 +193,7 @@ async def cmd_test_solar(message: Message, state: FSMContext):
         solar_place=_test_place(TEST_SOLAR_PLACE),
         solar_cycle_year=2026,
         user_context=None,
+        is_test_report=True,
     )
     await message.answer("🧪 Запускаю тестовый соляр: Анна, 25.10.1992 04:00, Холмск → Варшава, 2026-2027.")
     await _run_solar_analysis(message, message.from_user, state)
@@ -198,6 +217,7 @@ async def cmd_test_synastry(message: Message, state: FSMContext):
         partner_birth_date="01.06.1992",
         partner_birth_time="04:24",
         partner_birth_place=_test_place(TEST_ALEXANDER_BIRTH_PLACE),
+        is_test_report=True,
     )
     await message.answer("🧪 Запускаю тестовую синастрию: Анна + Александр.")
     await _run_synastry_analysis(message, message.from_user, state)
@@ -859,6 +879,7 @@ async def process_confirm_go(callback: CallbackQuery, state: FSMContext):
     report_type = data.get("report_type", "solar")
 
     if not PAYMENTS_ENABLED:
+        await state.update_data(payment_confirmed=False)
         await callback.message.edit_text("Запускаю расчёт...")
         if report_type == "synastry":
             await _run_synastry_analysis(callback.message, callback.from_user, state)
@@ -1004,6 +1025,7 @@ async def process_successful_payment(message: Message, state: FSMContext):
     data = await state.get_data()
     report_type = data.get("report_type", "solar")
     log_event(message.from_user.id, f"{report_type}_payment_success")
+    await state.update_data(payment_confirmed=True)
     if report_type == "synastry":
         await message.answer("Оплата получена ⭐ Готовлю полную расшифровку синастрии...")
         await _run_synastry_analysis(message, message.from_user, state)
@@ -1037,6 +1059,11 @@ async def cmd_stats(message: Message):
             return max(summary.get(item, 0) for item in event)
         return count(event)
 
+    def paid_generated(report_type: str) -> int:
+        return count_users_with_events(
+            (f"{report_type}_payment_success", f"{report_type}_generated")
+        )
+
     def pct(part: int, total: int) -> str:
         if total <= 0:
             return "—"
@@ -1067,7 +1094,6 @@ async def cmd_stats(message: Message):
         ("нажали «Всё верно»", "solar_payment_started"),
         ("увидели кнопку оплаты", ("solar_payment_invoice_sent", "solar_payment_started")),
         ("успешно оплатили", "solar_payment_success"),
-        ("получили файл", "solar_generated"),
     ]
     synastry_steps = [
         ("выбрали синастрию", "synastry_selected"),
@@ -1083,21 +1109,35 @@ async def cmd_stats(message: Message):
         ("нажали «Всё верно»", "synastry_payment_started"),
         ("увидели кнопку оплаты", ("synastry_payment_invoice_sent", "synastry_payment_started")),
         ("успешно оплатили", "synastry_payment_success"),
-        ("получили файл", "synastry_generated"),
     ]
 
     lines = ["📊 Воронка (уникальные пользователи):"]
     lines.append(f"\nОбщий старт: {count('start')}")
+    selected_total = count_users_with_any_event(("solar_selected", "synastry_selected"))
+    lines.append(f"Выбрали тип разбора: {selected_total} ({pct(selected_total, count('start'))} от старта)")
+    lines.append(f"Не выбрали тип разбора: {max(count('start') - selected_total, 0)}")
     lines.extend(funnel_block("🌞 Соляр", solar_steps))
     lines.extend(funnel_block("💞 Синастрия", synastry_steps))
 
-    lines.append("\nСтарые общие события (до подробного разделения):")
-    lines.append(f"name_entered: {count('name_entered')}")
-    lines.append(f"birth_date_entered: {count('birth_date_entered')}")
-    lines.append(f"city_entered: {count('city_entered')}")
-    lines.append(f"payment_started: {count('payment_started')}")
-    lines.append(f"payment_invoice_sent: {count('payment_invoice_sent')}")
-    lines.append(f"payment_success: {count('payment_success')}")
+    solar_generated = count("solar_generated")
+    solar_paid_generated = max(
+        count("solar_generated_after_payment"),
+        paid_generated("solar"),
+    )
+    synastry_generated = count("synastry_generated")
+    synastry_paid_generated = max(
+        count("synastry_generated_after_payment"),
+        paid_generated("synastry"),
+    )
+    lines.append("\n📄 Файлы / выдачи:")
+    lines.append(
+        f"соляр — всего файлов: {solar_generated}; после оплаты: {solar_paid_generated}; "
+        f"бесплатно/тест/старый режим: {max(solar_generated - solar_paid_generated, 0)}"
+    )
+    lines.append(
+        f"синастрия — всего файлов: {synastry_generated}; после оплаты: {synastry_paid_generated}; "
+        f"бесплатно/тест/старый режим: {max(synastry_generated - synastry_paid_generated, 0)}"
+    )
 
     lines.append("\n📍 Источники (?start=...):")
     if sources:
@@ -1239,7 +1279,7 @@ async def _run_solar_analysis(answer_target, from_user: User, state: FSMContext)
     display_name = re.sub(r"\s+", " ", display_name)
     display_filename = f"{display_name}.pdf"
 
-    log_event(from_user.id, "solar_generated")
+    _log_generated_event(from_user.id, data, "solar")
 
     try:
         await answer_target.answer_document(FSInputFile(output_path, filename=display_filename))
@@ -1407,7 +1447,7 @@ async def _run_synastry_analysis(answer_target, from_user: User, state: FSMConte
     display_name = re.sub(r"\s+", " ", display_name)
     display_filename = f"{display_name}.pdf"
 
-    log_event(from_user.id, "synastry_generated")
+    _log_generated_event(from_user.id, data, "synastry")
 
     try:
         await answer_target.answer_document(FSInputFile(output_path, filename=display_filename))
