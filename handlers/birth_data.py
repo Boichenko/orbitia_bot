@@ -61,7 +61,7 @@ YEAR_RE = re.compile(r"^(\d{4})$")
 NO_TIME_ANSWERS = {"не знаю", "не знаю точно", "незнаю", "не помню"}
 
 SOLAR_STARS_PRICE = int(os.getenv("SOLAR_STARS_PRICE", "100"))
-SYNASTRY_STARS_PRICE = int(os.getenv("SYNASTRY_STARS_PRICE", "300"))
+SYNASTRY_STARS_PRICE = int(os.getenv("SYNASTRY_STARS_PRICE", "500"))
 PAYMENTS_ENABLED = os.getenv("PAYMENTS_ENABLED", "false").strip().lower() == "true"
 ADMIN_USER_ID = os.getenv("ADMIN_USER_ID", "").strip()
 REPORT_TYPES = {"solar", "synastry"}
