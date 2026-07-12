@@ -96,6 +96,7 @@ class SynastryReportRequest(BaseModel):
 
 class CreatePaymentRequest(BaseModel):
     report_type: Literal["solar", "synastry"]
+    provider: Literal["yookassa", "stripe"] = "yookassa"
     payload: dict
 
 
@@ -130,7 +131,7 @@ async def payment_create(payload: CreatePaymentRequest):
         report_payload = SynastryReportRequest.model_validate(payload.payload).model_dump()
 
     try:
-        order = await create_payment(payload.report_type, report_payload)
+        order = await create_payment(payload.report_type, report_payload, payload.provider)
     except Exception as exc:
         raise HTTPException(status_code=502, detail=f"Не удалось создать платёж: {exc}") from exc
     return public_order(order)
