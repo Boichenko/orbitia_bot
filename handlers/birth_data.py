@@ -27,7 +27,7 @@ from services.analytics import (
     count_users_with_any_event,
     count_users_with_events,
     funnel_summary,
-    list_sources,
+    list_sources_for_any_event,
     log_event,
 )
 from services.claude_client import interpret_solar_chart
@@ -1049,7 +1049,8 @@ async def cmd_stats(message: Message):
         return
 
     summary = funnel_summary()
-    sources = list_sources()
+    selected_events = ("solar_selected", "synastry_selected")
+    sources = list_sources_for_any_event(selected_events)
 
     def count(event: str) -> int:
         return summary.get(event, 0)
@@ -1113,7 +1114,7 @@ async def cmd_stats(message: Message):
 
     lines = ["📊 Воронка (уникальные пользователи):"]
     lines.append(f"\nОбщий старт: {count('start')}")
-    selected_total = count_users_with_any_event(("solar_selected", "synastry_selected"))
+    selected_total = count_users_with_any_event(selected_events)
     lines.append(f"Выбрали тип разбора: {selected_total} ({pct(selected_total, count('start'))} от старта)")
     lines.append(f"Не выбрали тип разбора: {max(count('start') - selected_total, 0)}")
     lines.extend(funnel_block("🌞 Соляр", solar_steps))
@@ -1139,7 +1140,7 @@ async def cmd_stats(message: Message):
         f"бесплатно/тест/старый режим: {max(synastry_generated - synastry_paid_generated, 0)}"
     )
 
-    lines.append("\n📍 Источники (?start=...):")
+    lines.append("\n📍 Источники среди выбравших разбор (?start=...):")
     if sources:
         for src, cnt in sources:
             lines.append(f"{src}: {cnt}")

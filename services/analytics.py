@@ -175,3 +175,29 @@ def list_sources() -> list[tuple[str, int]]:
         return rows
     finally:
         conn.close()
+
+
+def list_sources_for_any_event(events: tuple[str, ...]) -> list[tuple[str, int]]:
+    if not events:
+        return []
+
+    placeholders = ",".join("?" for _ in events)
+    conn = _get_conn()
+    try:
+        rows = conn.execute(
+            f"""
+            SELECT COALESCE(u.source, '(без метки)') AS src, COUNT(*) AS cnt
+            FROM (
+                SELECT DISTINCT user_id
+                FROM events
+                WHERE event IN ({placeholders})
+            ) selected_users
+            LEFT JOIN users u ON u.user_id = selected_users.user_id
+            GROUP BY src
+            ORDER BY cnt DESC
+            """,
+            events,
+        ).fetchall()
+        return rows
+    finally:
+        conn.close()
