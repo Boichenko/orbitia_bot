@@ -23,8 +23,8 @@ YOOKASSA_API_URL = "https://api.yookassa.ru/v3"
 YOOKASSA_SHOP_ID = os.getenv("YOOKASSA_SHOP_ID", "").strip()
 YOOKASSA_SECRET_KEY = os.getenv("YOOKASSA_SECRET_KEY", "").strip()
 YOOKASSA_RETURN_URL = os.getenv("YOOKASSA_RETURN_URL", "https://orbitia.info/calculate").strip()
-SOLAR_PRICE_RUB = Decimal(os.getenv("SOLAR_PRICE_RUB", "990"))
-SYNASTRY_PRICE_RUB = Decimal(os.getenv("SYNASTRY_PRICE_RUB", "1490"))
+SOLAR_PRICE_RUB = Decimal(os.getenv("SOLAR_PRICE_RUB", "500"))
+SYNASTRY_PRICE_RUB = Decimal(os.getenv("SYNASTRY_PRICE_RUB", "1500"))
 
 ReportType = Literal["solar", "synastry"]
 
