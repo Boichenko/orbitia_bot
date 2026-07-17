@@ -23,10 +23,17 @@ def _get_conn() -> sqlite3.Connection:
             job_id TEXT PRIMARY KEY,
             user_id INTEGER NOT NULL,
             input_data TEXT NOT NULL,
-            created_at INTEGER NOT NULL
+            created_at INTEGER NOT NULL,
+            status TEXT NOT NULL DEFAULT 'pending'
         )
         """
     )
+    columns = {row[1] for row in conn.execute("PRAGMA table_info(payment_jobs)")}
+    if "status" not in columns:
+        conn.execute(
+            "ALTER TABLE payment_jobs ADD COLUMN status TEXT NOT NULL DEFAULT 'pending'"
+        )
+        conn.commit()
     return conn
 
 
@@ -55,5 +62,81 @@ def get_payment_job(job_id: str, user_id: int) -> dict[str, Any] | None:
             (job_id, user_id),
         ).fetchone()
         return json.loads(row[0]) if row else None
+    finally:
+        conn.close()
+
+
+def mark_payment_job_active(job_id: str, user_id: int) -> None:
+    _set_status(job_id, user_id, "active")
+
+
+def finish_payment_job(job_id: str, user_id: int) -> None:
+    conn = _get_conn()
+    try:
+        conn.execute(
+            """
+            UPDATE payment_jobs SET status = 'finished'
+            WHERE job_id = ? AND user_id = ? AND status = 'active'
+            """,
+            (job_id, user_id),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def cancel_payment_job(job_id: str, user_id: int) -> bool:
+    conn = _get_conn()
+    try:
+        cursor = conn.execute(
+            """
+            UPDATE payment_jobs SET status = 'cancelled'
+            WHERE job_id = ? AND user_id = ? AND status = 'active'
+            """,
+            (job_id, user_id),
+        )
+        conn.commit()
+        return cursor.rowcount > 0
+    finally:
+        conn.close()
+
+
+def get_active_payment_job(user_id: int) -> str | None:
+    conn = _get_conn()
+    try:
+        row = conn.execute(
+            """
+            SELECT job_id FROM payment_jobs
+            WHERE user_id = ? AND status = 'active'
+            ORDER BY created_at DESC LIMIT 1
+            """,
+            (user_id,),
+        ).fetchone()
+        return row[0] if row else None
+    finally:
+        conn.close()
+
+
+def is_payment_job_cancelled(job_id: str, user_id: int) -> bool:
+    conn = _get_conn()
+    try:
+        row = conn.execute(
+            "SELECT status FROM payment_jobs WHERE job_id = ? AND user_id = ?",
+            (job_id, user_id),
+        ).fetchone()
+        return bool(row and row[0] == "cancelled")
+    finally:
+        conn.close()
+
+
+def _set_status(job_id: str, user_id: int, status: str) -> int:
+    conn = _get_conn()
+    try:
+        cursor = conn.execute(
+            "UPDATE payment_jobs SET status = ? WHERE job_id = ? AND user_id = ?",
+            (status, job_id, user_id),
+        )
+        conn.commit()
+        return cursor.rowcount
     finally:
         conn.close()

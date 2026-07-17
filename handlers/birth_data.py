@@ -32,7 +32,13 @@ from services.analytics import (
 )
 from services.claude_client import interpret_solar_chart
 from services.geocoding import search_city
-from services.payment_jobs import create_payment_job, get_payment_job
+from services.payment_jobs import (
+    create_payment_job,
+    finish_payment_job,
+    get_payment_job,
+    is_payment_job_cancelled,
+    mark_payment_job_active,
+)
 from services.prompt_builder import (
     build_solar_json_prompt,
     build_solar_prompt,
@@ -1032,11 +1038,13 @@ async def process_successful_payment(message: Message, state: FSMContext):
 
     payload = message.successful_payment.invoice_payload
     payload_report_type, separator, job_id = payload.partition(":")
-    data = (
+    stored_data = (
         get_payment_job(job_id, message.from_user.id)
         if separator and payload_report_type in REPORT_TYPES
         else None
     )
+    active_job_id = job_id if stored_data is not None else None
+    data = stored_data
 
     # Compatibility with invoices that were issued before jobs got a persistent ID.
     if data is None:
@@ -1052,13 +1060,15 @@ async def process_successful_payment(message: Message, state: FSMContext):
     report_type = data.get("report_type", "solar")
     log_event(message.from_user.id, f"{report_type}_payment_success")
     data["payment_confirmed"] = True
+    if active_job_id:
+        mark_payment_job_active(active_job_id, message.from_user.id)
     await state.clear()
     if report_type == "synastry":
         await message.answer("Оплата получена ⭐ Готовлю полную расшифровку синастрии...")
-        await _run_synastry_analysis(message, message.from_user, data)
+        await _run_synastry_analysis(message, message.from_user, data, active_job_id)
     else:
         await message.answer("Оплата получена ⭐ Готовлю полную расшифровку соляра...")
-        await _run_solar_analysis(message, message.from_user, data)
+        await _run_solar_analysis(message, message.from_user, data, active_job_id)
 
 
 @router.message(Command("paysupport"))
@@ -1182,7 +1192,19 @@ async def cmd_stats(message: Message):
 # ---------------------------------------------------------------------------
 
 
-async def _run_solar_analysis(answer_target, from_user: User, data: dict) -> None:
+async def _run_solar_analysis(
+    answer_target, from_user: User, data: dict, job_id: str | None = None
+) -> None:
+    try:
+        await _generate_solar_analysis(answer_target, from_user, data, job_id)
+    finally:
+        if job_id:
+            finish_payment_job(job_id, from_user.id)
+
+
+async def _generate_solar_analysis(
+    answer_target, from_user: User, data: dict, job_id: str | None
+) -> None:
     birth_place = data["birth_place"]
     solar_place = data["solar_place"]
     cycle_year = data["solar_cycle_year"]
@@ -1240,7 +1262,11 @@ async def _run_solar_analysis(answer_target, from_user: User, data: dict) -> Non
     try:
         buffer, stop_reason = await interpret_solar_chart(prompt)
     except Exception as e:
-        await progress_msg.edit_text(f"Клод не ответил: {e}")
+        if not job_id or not is_payment_job_cancelled(job_id, from_user.id):
+            await progress_msg.edit_text(f"Клод не ответил: {e}")
+        return
+
+    if job_id and is_payment_job_cancelled(job_id, from_user.id):
         return
 
     try:
@@ -1265,6 +1291,9 @@ async def _run_solar_analysis(answer_target, from_user: User, data: dict) -> Non
         except Exception as e:
             await progress_msg.edit_text(f"Не удалось собрать отчёт: {e}")
             return
+
+    if job_id and is_payment_job_cancelled(job_id, from_user.id):
+        return
 
     cut_off_note = (
         "\n\n⚠️ Ответ получился длиннее лимита и мог быть обрезан."
@@ -1298,6 +1327,15 @@ async def _run_solar_analysis(answer_target, from_user: User, data: dict) -> Non
         )
         await markdown_to_pdf(title, buffer, output_path, visual_profile=visual_profile)
 
+    if job_id and is_payment_job_cancelled(job_id, from_user.id):
+        if os.path.exists(output_path):
+            os.remove(output_path)
+        try:
+            await file_status.delete()
+        except Exception:
+            pass
+        return
+
     name_part = re.sub(r'[\\/:*?"<>|]', "", data.get("person_name", "")).strip()
     display_name = f"{name_part} {data['birth_date']} {cycle_year}-{cycle_year + 1}".strip()
     display_name = re.sub(r"\s+", " ", display_name)
@@ -1322,7 +1360,19 @@ async def _run_solar_analysis(answer_target, from_user: User, data: dict) -> Non
     )
     await answer_target.answer("Готово! Если нужен ещё один разбор:", reply_markup=kb)
 
-async def _run_synastry_analysis(answer_target, from_user: User, data: dict) -> None:
+async def _run_synastry_analysis(
+    answer_target, from_user: User, data: dict, job_id: str | None = None
+) -> None:
+    try:
+        await _generate_synastry_analysis(answer_target, from_user, data, job_id)
+    finally:
+        if job_id:
+            finish_payment_job(job_id, from_user.id)
+
+
+async def _generate_synastry_analysis(
+    answer_target, from_user: User, data: dict, job_id: str | None
+) -> None:
     birth_place = data["birth_place"]
     partner_birth_place = data["partner_birth_place"]
 
@@ -1391,7 +1441,11 @@ async def _run_synastry_analysis(answer_target, from_user: User, data: dict) -> 
     try:
         buffer, stop_reason = await interpret_solar_chart(prompt)
     except Exception as e:
-        await progress_msg.edit_text(f"Клод не ответил: {e}")
+        if not job_id or not is_payment_job_cancelled(job_id, from_user.id):
+            await progress_msg.edit_text(f"Клод не ответил: {e}")
+        return
+
+    if job_id and is_payment_job_cancelled(job_id, from_user.id):
         return
 
     try:
@@ -1417,6 +1471,9 @@ async def _run_synastry_analysis(answer_target, from_user: User, data: dict) -> 
         except Exception as e:
             await progress_msg.edit_text(f"Не удалось собрать отчёт: {e}")
             return
+
+    if job_id and is_payment_job_cancelled(job_id, from_user.id):
+        return
 
     cut_off_note = (
         "\n\n⚠️ Ответ получился длиннее лимита и мог быть обрезан."
@@ -1457,6 +1514,15 @@ async def _run_synastry_analysis(answer_target, from_user: User, data: dict) -> 
             partner_name=partner_name,
         )
         await markdown_to_pdf(title, buffer, output_path, visual_profile=visual_profile)
+
+    if job_id and is_payment_job_cancelled(job_id, from_user.id):
+        if os.path.exists(output_path):
+            os.remove(output_path)
+        try:
+            await file_status.delete()
+        except Exception:
+            pass
+        return
 
     safe_first = re.sub(r'[\\/:*?"<>|]', "", first_name).strip()
     safe_partner = re.sub(r'[\\/:*?"<>|]', "", partner_name).strip()
