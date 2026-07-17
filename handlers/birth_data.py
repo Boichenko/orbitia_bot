@@ -32,6 +32,7 @@ from services.analytics import (
 )
 from services.claude_client import interpret_solar_chart
 from services.geocoding import search_city
+from services.payment_jobs import create_payment_job, get_payment_job
 from services.prompt_builder import (
     build_solar_json_prompt,
     build_solar_prompt,
@@ -196,7 +197,9 @@ async def cmd_test_solar(message: Message, state: FSMContext):
         is_test_report=True,
     )
     await message.answer("🧪 Запускаю тестовый соляр: Анна, 25.10.1992 04:00, Холмск → Варшава, 2026-2027.")
-    await _run_solar_analysis(message, message.from_user, state)
+    data = await state.get_data()
+    await state.clear()
+    await _run_solar_analysis(message, message.from_user, data)
 
 
 @router.message(Command("test_sin"))
@@ -220,7 +223,9 @@ async def cmd_test_synastry(message: Message, state: FSMContext):
         is_test_report=True,
     )
     await message.answer("🧪 Запускаю тестовую синастрию: Анна + Александр.")
-    await _run_synastry_analysis(message, message.from_user, state)
+    data = await state.get_data()
+    await state.clear()
+    await _run_synastry_analysis(message, message.from_user, data)
 
 
 # ---------------------------------------------------------------------------
@@ -879,16 +884,18 @@ async def process_confirm_go(callback: CallbackQuery, state: FSMContext):
     report_type = data.get("report_type", "solar")
 
     if not PAYMENTS_ENABLED:
-        await state.update_data(payment_confirmed=False)
+        data["payment_confirmed"] = False
+        await state.clear()
         await callback.message.edit_text("Запускаю расчёт...")
         if report_type == "synastry":
-            await _run_synastry_analysis(callback.message, callback.from_user, state)
+            await _run_synastry_analysis(callback.message, callback.from_user, data)
         else:
-            await _run_solar_analysis(callback.message, callback.from_user, state)
+            await _run_solar_analysis(callback.message, callback.from_user, data)
         return
 
     log_event(callback.from_user.id, "payment_started")
     log_event(callback.from_user.id, f"{report_type}_payment_started")
+    job_id = create_payment_job(callback.from_user.id, data)
     try:
         pre_payment_pitch = _build_pre_payment_pitch(data, report_type)
     except Exception as e:
@@ -909,13 +916,13 @@ async def process_confirm_go(callback: CallbackQuery, state: FSMContext):
     if report_type == "synastry":
         title = "Синастрия / совместимость"
         description = f"Разбор совместимости по двум натальным картам — {SYNASTRY_STARS_PRICE} ⭐"
-        payload = "synastry_analysis"
+        payload = f"synastry:{job_id}"
         prices = [LabeledPrice(label="Синастрия", amount=SYNASTRY_STARS_PRICE)]
         pay_button_text = f"Рассчитать синастрию — {SYNASTRY_STARS_PRICE} ⭐"
     else:
         title = "Разбор соляра на год"
         description = f"Полный астрологический разбор соляра — {SOLAR_STARS_PRICE} ⭐"
-        payload = "solar_chart_analysis"
+        payload = f"solar:{job_id}"
         prices = [LabeledPrice(label="Разбор соляра", amount=SOLAR_STARS_PRICE)]
         pay_button_text = f"Рассчитать мой соляр — {SOLAR_STARS_PRICE} ⭐"
 
@@ -1022,16 +1029,36 @@ async def process_pre_checkout(query: PreCheckoutQuery):
 @router.message(F.successful_payment)
 async def process_successful_payment(message: Message, state: FSMContext):
     log_event(message.from_user.id, "payment_success")
-    data = await state.get_data()
+
+    payload = message.successful_payment.invoice_payload
+    payload_report_type, separator, job_id = payload.partition(":")
+    data = (
+        get_payment_job(job_id, message.from_user.id)
+        if separator and payload_report_type in REPORT_TYPES
+        else None
+    )
+
+    # Compatibility with invoices that were issued before jobs got a persistent ID.
+    if data is None:
+        data = await state.get_data()
+
+    if not data or "birth_place" not in data:
+        await message.answer(
+            "Оплата получена ⭐, но данные расчёта не нашлись. "
+            "Напиши /paysupport — оплату обязательно проверю."
+        )
+        return
+
     report_type = data.get("report_type", "solar")
     log_event(message.from_user.id, f"{report_type}_payment_success")
-    await state.update_data(payment_confirmed=True)
+    data["payment_confirmed"] = True
+    await state.clear()
     if report_type == "synastry":
         await message.answer("Оплата получена ⭐ Готовлю полную расшифровку синастрии...")
-        await _run_synastry_analysis(message, message.from_user, state)
+        await _run_synastry_analysis(message, message.from_user, data)
     else:
         await message.answer("Оплата получена ⭐ Готовлю полную расшифровку соляра...")
-        await _run_solar_analysis(message, message.from_user, state)
+        await _run_solar_analysis(message, message.from_user, data)
 
 
 @router.message(Command("paysupport"))
@@ -1155,8 +1182,7 @@ async def cmd_stats(message: Message):
 # ---------------------------------------------------------------------------
 
 
-async def _run_solar_analysis(answer_target, from_user: User, state: FSMContext) -> None:
-    data = await state.get_data()
+async def _run_solar_analysis(answer_target, from_user: User, data: dict) -> None:
     birth_place = data["birth_place"]
     solar_place = data["solar_place"]
     cycle_year = data["solar_cycle_year"]
@@ -1202,7 +1228,6 @@ async def _run_solar_analysis(answer_target, from_user: User, state: FSMContext)
         )
     except Exception as e:
         await progress_msg.edit_text(f"Не удалось рассчитать соляр: {e}")
-        await state.clear()
         return
 
     prompt = build_solar_json_prompt(
@@ -1216,7 +1241,6 @@ async def _run_solar_analysis(answer_target, from_user: User, state: FSMContext)
         buffer, stop_reason = await interpret_solar_chart(prompt)
     except Exception as e:
         await progress_msg.edit_text(f"Клод не ответил: {e}")
-        await state.clear()
         return
 
     try:
@@ -1240,7 +1264,6 @@ async def _run_solar_analysis(answer_target, from_user: User, state: FSMContext)
             buffer, stop_reason = await interpret_solar_chart(fallback_prompt)
         except Exception as e:
             await progress_msg.edit_text(f"Не удалось собрать отчёт: {e}")
-            await state.clear()
             return
 
     cut_off_note = (
@@ -1299,11 +1322,7 @@ async def _run_solar_analysis(answer_target, from_user: User, state: FSMContext)
     )
     await answer_target.answer("Готово! Если нужен ещё один разбор:", reply_markup=kb)
 
-    await state.clear()
-
-
-async def _run_synastry_analysis(answer_target, from_user: User, state: FSMContext) -> None:
-    data = await state.get_data()
+async def _run_synastry_analysis(answer_target, from_user: User, data: dict) -> None:
     birth_place = data["birth_place"]
     partner_birth_place = data["partner_birth_place"]
 
@@ -1362,7 +1381,6 @@ async def _run_synastry_analysis(answer_target, from_user: User, state: FSMConte
         )
     except Exception as e:
         await progress_msg.edit_text(f"Не удалось рассчитать синастрию: {e}")
-        await state.clear()
         return
 
     first_name = data.get("person_name", "")
@@ -1374,7 +1392,6 @@ async def _run_synastry_analysis(answer_target, from_user: User, state: FSMConte
         buffer, stop_reason = await interpret_solar_chart(prompt)
     except Exception as e:
         await progress_msg.edit_text(f"Клод не ответил: {e}")
-        await state.clear()
         return
 
     try:
@@ -1399,7 +1416,6 @@ async def _run_synastry_analysis(answer_target, from_user: User, state: FSMConte
             buffer, stop_reason = await interpret_solar_chart(fallback_prompt)
         except Exception as e:
             await progress_msg.edit_text(f"Не удалось собрать отчёт: {e}")
-            await state.clear()
             return
 
     cut_off_note = (
@@ -1466,9 +1482,6 @@ async def _run_synastry_analysis(answer_target, from_user: User, state: FSMConte
         ]
     )
     await answer_target.answer("Готово! Если нужен ещё один разбор:", reply_markup=kb)
-
-    await state.clear()
-
 
 @router.callback_query(F.data == "restart:new")
 async def process_restart(callback: CallbackQuery, state: FSMContext):
