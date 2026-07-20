@@ -27,8 +27,11 @@ from services.analytics import (
     count_users_with_any_event,
     count_users_with_events,
     funnel_summary,
-    list_sources_for_any_event,
+    list_sources,
     log_event,
+    payment_summary,
+    record_payment,
+    save_report_artifact,
 )
 from services.claude_client import interpret_solar_chart
 from services.geocoding import search_city
@@ -1034,10 +1037,24 @@ async def process_pre_checkout(query: PreCheckoutQuery):
 
 @router.message(F.successful_payment)
 async def process_successful_payment(message: Message, state: FSMContext):
-    log_event(message.from_user.id, "payment_success")
-
     payload = message.successful_payment.invoice_payload
     payload_report_type, separator, job_id = payload.partition(":")
+    payment = message.successful_payment
+    # Record the money first. Even if calculation data is missing or corrupt,
+    # a completed Telegram payment must never disappear from statistics.
+    if separator and payload_report_type in REPORT_TYPES:
+        record_payment(
+            telegram_charge_id=payment.telegram_payment_charge_id,
+            provider_charge_id=payment.provider_payment_charge_id,
+            user_id=message.from_user.id,
+            report_type=payload_report_type,
+            amount=payment.total_amount,
+            currency=payment.currency,
+            job_id=job_id,
+        )
+        log_event(message.from_user.id, "payment_success")
+        log_event(message.from_user.id, f"{payload_report_type}_payment_success")
+
     stored_data = (
         get_payment_job(job_id, message.from_user.id)
         if separator and payload_report_type in REPORT_TYPES
@@ -1058,7 +1075,19 @@ async def process_successful_payment(message: Message, state: FSMContext):
         return
 
     report_type = data.get("report_type", "solar")
-    log_event(message.from_user.id, f"{report_type}_payment_success")
+    # Compatibility for a malformed/legacy payload that did not identify type.
+    if not (separator and payload_report_type in REPORT_TYPES):
+        record_payment(
+            telegram_charge_id=payment.telegram_payment_charge_id,
+            provider_charge_id=payment.provider_payment_charge_id,
+            user_id=message.from_user.id,
+            report_type=report_type,
+            amount=payment.total_amount,
+            currency=payment.currency,
+            job_id=active_job_id,
+        )
+        log_event(message.from_user.id, "payment_success")
+        log_event(message.from_user.id, f"{report_type}_payment_success")
     data["payment_confirmed"] = True
     if active_job_id:
         mark_payment_job_active(active_job_id, message.from_user.id)
@@ -1087,7 +1116,7 @@ async def cmd_stats(message: Message):
 
     summary = funnel_summary()
     selected_events = ("solar_selected", "synastry_selected")
-    sources = list_sources_for_any_event(selected_events)
+    sources = list_sources()
 
     def count(event: str) -> int:
         return summary.get(event, 0)
@@ -1177,12 +1206,24 @@ async def cmd_stats(message: Message):
         f"бесплатно/тест/старый режим: {max(synastry_generated - synastry_paid_generated, 0)}"
     )
 
-    lines.append("\n📍 Источники среди выбравших разбор (?start=...):")
+    lines.append("\n📍 Все входы по меткам (?start=..., уникальные люди):")
     if sources:
         for src, cnt in sources:
             lines.append(f"{src}: {cnt}")
     else:
         lines.append("(пока нет данных)")
+
+    lines.append("\n💳 Реальные оплаты по меткам:")
+    payments = payment_summary()
+    if payments:
+        report_names = {"solar": "соляр", "synastry": "синастрия"}
+        for report_type, currency, source, payment_count, amount in payments:
+            lines.append(
+                f"{report_names.get(report_type, report_type)} · {source}: "
+                f"{payment_count} оплат, {amount} {currency}"
+            )
+    else:
+        lines.append("(пока нет сохранённых оплат)")
 
     await message.answer("\n".join(lines))
 
@@ -1257,6 +1298,7 @@ async def _generate_solar_analysis(
         person_name=data.get("person_name", ""),
         user_context=user_context,
     )
+    used_prompts = [{"kind": "structured_json", "prompt": prompt}]
 
     report_json = None
     try:
@@ -1279,6 +1321,7 @@ async def _generate_solar_analysis(
             person_name=data.get("person_name", ""),
             user_context=user_context,
         )
+        used_prompts.append({"kind": "text_fallback", "prompt": fallback_prompt})
         try:
             await progress_msg.edit_text(
                 "✍️ Собираю текстовую версию разбора, визуальный шаблон не принял данные..."
@@ -1341,6 +1384,14 @@ async def _generate_solar_analysis(
     display_name = re.sub(r"\s+", " ", display_name)
     display_filename = f"{display_name}.pdf"
 
+    save_report_artifact(
+        user_id=from_user.id,
+        report_type="solar",
+        job_id=job_id,
+        prompts=used_prompts,
+        response_text=buffer,
+        filename=display_filename,
+    )
     _log_generated_event(from_user.id, data, "solar")
 
     try:
@@ -1436,6 +1487,7 @@ async def _generate_synastry_analysis(
     first_name = data.get("person_name", "")
     partner_name = data.get("partner_name", "")
     prompt = build_synastry_json_prompt(chart_data, first_name=first_name, partner_name=partner_name)
+    used_prompts = [{"kind": "structured_json", "prompt": prompt}]
 
     report_json = None
     try:
@@ -1460,6 +1512,7 @@ async def _generate_synastry_analysis(
             first_name=first_name,
             partner_name=partner_name,
         )
+        used_prompts.append({"kind": "text_fallback", "prompt": fallback_prompt})
         try:
             await progress_msg.edit_text(
                 "✍️ Собираю текстовую версию синастрии, визуальный шаблон не принял данные..."
@@ -1530,6 +1583,14 @@ async def _generate_synastry_analysis(
     display_name = re.sub(r"\s+", " ", display_name)
     display_filename = f"{display_name}.pdf"
 
+    save_report_artifact(
+        user_id=from_user.id,
+        report_type="synastry",
+        job_id=job_id,
+        prompts=used_prompts,
+        response_text=buffer,
+        filename=display_filename,
+    )
     _log_generated_event(from_user.id, data, "synastry")
 
     try:
