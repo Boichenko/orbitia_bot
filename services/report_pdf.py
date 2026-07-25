@@ -2176,3 +2176,8 @@ async def markdown_to_pdf(
         await _html_to_pdf(title, markdown_text, output_path, visual_profile)
     except Exception:
         _reportlab_markdown_to_pdf(title, markdown_text, output_path, visual_profile)
+
+
+def plain_markdown_to_pdf(title: str, markdown_text: str, output_path: str) -> None:
+    """Stable neutral PDF used while a product-specific design is not ready."""
+    _reportlab_markdown_to_pdf(title, markdown_text, output_path)

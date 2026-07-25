@@ -16,15 +16,16 @@ async def start_flow(answer_target, state: FSMContext) -> None:
     await state.clear()
     kb = InlineKeyboardMarkup(
         inline_keyboard=[
+            [InlineKeyboardButton(text="🪐 Натальная карта", callback_data="report:natal")],
             [InlineKeyboardButton(text="💞 Синастрия / совместимость", callback_data="report:synastry")],
             [InlineKeyboardButton(text="🌞 Соляр", callback_data="report:solar")],
         ]
     )
     await answer_target.answer(
         "Привет! Я Orbitia 🌞\n\n"
-        "Я считаю соляр на персональный год и синастрию совместимости по данным "
-        "двух людей. Расчёт идёт по реальным эфемеридам, с развёрнутым разбором "
-        "планет, домов и аспектов.\n\n"
+        "Я считаю натальную карту, соляр на персональный год и синастрию "
+        "совместимости. Расчёт идёт по реальным эфемеридам, с развёрнутым "
+        "разбором планет, домов и аспектов.\n\n"
         "Что хочешь рассчитать?",
         reply_markup=kb,
     )

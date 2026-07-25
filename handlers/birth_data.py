@@ -43,11 +43,13 @@ from services.payment_jobs import (
     mark_payment_job_active,
 )
 from services.prompt_builder import (
+    build_natal_prompt,
     build_solar_json_prompt,
     build_solar_prompt,
     build_synastry_json_prompt,
     build_synastry_prompt,
 )
+from services.natal_chart import compute_natal_chart
 from services.report_file import extract_main_theme
 from services.report_json import (
     normalize_solar_report,
@@ -56,7 +58,12 @@ from services.report_json import (
     structured_report_to_teaser,
 )
 from services.report_insights import build_solar_profile, build_synastry_profile
-from services.report_pdf import markdown_to_pdf, structured_solar_to_pdf, structured_synastry_to_pdf
+from services.report_pdf import (
+    markdown_to_pdf,
+    plain_markdown_to_pdf,
+    structured_solar_to_pdf,
+    structured_synastry_to_pdf,
+)
 from services.solar_chart import compute_solar_return
 from services.synastry_chart import compute_synastry
 from services.timezone_lookup import get_timezone
@@ -72,9 +79,10 @@ NO_TIME_ANSWERS = {"не знаю", "не знаю точно", "незнаю", 
 
 SOLAR_STARS_PRICE = int(os.getenv("SOLAR_STARS_PRICE", "100"))
 SYNASTRY_STARS_PRICE = int(os.getenv("SYNASTRY_STARS_PRICE", "500"))
+NATAL_STARS_PRICE = int(os.getenv("NATAL_STARS_PRICE", "200"))
 PAYMENTS_ENABLED = os.getenv("PAYMENTS_ENABLED", "false").strip().lower() == "true"
 ADMIN_USER_ID = os.getenv("ADMIN_USER_ID", "").strip()
-REPORT_TYPES = {"solar", "synastry"}
+REPORT_TYPES = {"solar", "synastry", "natal"}
 PROJECT_ROOT = os.path.dirname(os.path.dirname(__file__))
 TEST_ANNA_BIRTH_PLACE = {
     "label": "Холмск, Сахалинская область, Россия",
@@ -171,7 +179,7 @@ async def process_report_type(callback: CallbackQuery, state: FSMContext):
 
 
 async def _begin_report_type(answer_target, state: FSMContext, user_id: int, report_type: str, edit: bool = False) -> None:
-    if report_type not in {"solar", "synastry"}:
+    if report_type not in REPORT_TYPES:
         await answer_target.answer("Не поняла тип расчёта. Нажми /start и выбери ещё раз.")
         return
 
@@ -179,6 +187,8 @@ async def _begin_report_type(answer_target, state: FSMContext, user_id: int, rep
     await state.update_data(report_type=report_type)
     if report_type == "synastry":
         text = "Считаем синастрию / совместимость 💞\n\nСначала соберём твои данные. Как тебя зовут?"
+    elif report_type == "natal":
+        text = "Считаем натальную карту 🪐\n\nКак тебя зовут?"
     else:
         text = "Считаем соляр 🌞\n\nКак зовут человека, для которого считаем?"
     if edit:
@@ -235,6 +245,26 @@ async def cmd_test_synastry(message: Message, state: FSMContext):
     data = await state.get_data()
     await state.clear()
     await _run_synastry_analysis(message, message.from_user, data)
+
+
+@router.message(Command("test_natal"))
+async def cmd_test_natal(message: Message, state: FSMContext):
+    if not _is_admin(message.from_user.id if message.from_user else None):
+        return
+    await state.clear()
+    await state.update_data(
+        report_type="natal",
+        person_name="Анна",
+        birth_date="25.10.1992",
+        birth_time="04:00",
+        birth_place=_test_place(TEST_ANNA_BIRTH_PLACE),
+        user_context="Отношения, деньги и профессиональная реализация",
+        is_test_report=True,
+    )
+    await message.answer("🧪 Запускаю тестовую натальную карту: Анна, 25.10.1992 04:00, Холмск.")
+    data = await state.get_data()
+    await state.clear()
+    await _run_natal_analysis(message, message.from_user, data)
 
 
 # ---------------------------------------------------------------------------
@@ -414,6 +444,8 @@ async def process_birth_place_choice(callback: CallbackQuery, state: FSMContext)
 
     if data.get("report_type") == "synastry":
         await _ask_partner_name(callback.message, state)
+    elif data.get("report_type") == "natal":
+        await _ask_context(callback.message, state)
     else:
         await _ask_cycle_year(callback.message, state)
 
@@ -694,13 +726,21 @@ async def _ask_solar_place(answer_target, state: FSMContext) -> None:
 
 
 async def _ask_context(answer_target, state: FSMContext) -> None:
+    data = await state.get_data()
     kb = InlineKeyboardMarkup(
         inline_keyboard=[[InlineKeyboardButton(text="Пропустить", callback_data="context:skip")]]
     )
-    await answer_target.answer(
-        "Расскажи немного о годе, который заканчивается (или уже закончился): что происходило, "
+    prompt = (
+        "Есть ли тема, которую особенно важно разобрать в натальной карте: характер, "
+        "отношения, деньги, карьера, предназначение или другой вопрос? "
+        "Это необязательно. Если запроса нет — жми «Пропустить»."
+        if data.get("report_type") == "natal"
+        else "Расскажи немного о годе, который заканчивается (или уже закончился): что происходило, "
         "какие были события, желания, планы. Это необязательно, но поможет точнее интерпретировать "
-        "соляр.\nЕсли не хочешь — жми «Пропустить».",
+        "соляр.\nЕсли не хочешь — жми «Пропустить»."
+    )
+    await answer_target.answer(
+        prompt,
         reply_markup=kb,
     )
     await state.set_state(SolarStates.waiting_context)
@@ -735,6 +775,9 @@ async def show_confirmation(answer_target, state: FSMContext) -> None:
     if data.get("report_type") == "synastry":
         await show_synastry_confirmation(answer_target, state)
         return
+    if data.get("report_type") == "natal":
+        await show_natal_confirmation(answer_target, state)
+        return
     _log_report_event(answer_target.chat.id, data, "confirmation_shown")
 
     birth_time = data.get("birth_time") or "неизвестно"
@@ -759,6 +802,26 @@ async def show_confirmation(answer_target, state: FSMContext) -> None:
     ]
     kb = InlineKeyboardMarkup(inline_keyboard=buttons)
     await answer_target.answer(text, reply_markup=kb)
+    await state.set_state(SolarStates.confirmation)
+
+
+async def show_natal_confirmation(answer_target, state: FSMContext) -> None:
+    data = await state.get_data()
+    _log_report_event(answer_target.chat.id, data, "confirmation_shown")
+    request = data.get("user_context") or "(не указан)"
+    text = (
+        "Проверь данные перед расчётом натальной карты:\n\n"
+        f"Имя: {data.get('person_name', '')}\n"
+        f"Дата рождения: {data['birth_date']}\n"
+        f"Время рождения: {data.get('birth_time') or 'неизвестно'}\n"
+        f"Место рождения: {data['birth_place']['label']}\n"
+        f"Особый запрос: {request}"
+    )
+    buttons = [
+        [InlineKeyboardButton(text="✅ Всё верно, считать!", callback_data="confirm:go")],
+        [InlineKeyboardButton(text="✏️ Поправить данные", callback_data="confirm:edit")],
+    ]
+    await answer_target.answer(text, reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons))
     await state.set_state(SolarStates.confirmation)
 
 
@@ -795,6 +858,8 @@ async def process_confirm_edit(callback: CallbackQuery, state: FSMContext):
     data = await state.get_data()
     if data.get("report_type") == "synastry":
         await show_synastry_edit_options(callback.message)
+    elif data.get("report_type") == "natal":
+        await show_natal_edit_options(callback.message)
     else:
         await show_solar_edit_options(callback.message)
 
@@ -837,6 +902,21 @@ async def show_synastry_edit_options(message: Message) -> None:
     ]
     await message.edit_text(
         "Что поправить в данных для синастрии?",
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons),
+    )
+
+
+async def show_natal_edit_options(message: Message) -> None:
+    buttons = [
+        [InlineKeyboardButton(text="✏️ Имя", callback_data="edit:name")],
+        [InlineKeyboardButton(text="✏️ Дата рождения", callback_data="edit:birth_date")],
+        [InlineKeyboardButton(text="✏️ Время рождения", callback_data="edit:birth_time")],
+        [InlineKeyboardButton(text="✏️ Место рождения", callback_data="edit:birth_place")],
+        [InlineKeyboardButton(text="✏️ Особый запрос", callback_data="edit:context")],
+        [InlineKeyboardButton(text="⬅️ Назад к проверке", callback_data="confirm:back")],
+    ]
+    await message.edit_text(
+        "Что поправить в данных для натальной карты?",
         reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons),
     )
 
@@ -898,6 +978,8 @@ async def process_confirm_go(callback: CallbackQuery, state: FSMContext):
         await callback.message.edit_text("Запускаю расчёт...")
         if report_type == "synastry":
             await _run_synastry_analysis(callback.message, callback.from_user, data)
+        elif report_type == "natal":
+            await _run_natal_analysis(callback.message, callback.from_user, data)
         else:
             await _run_solar_analysis(callback.message, callback.from_user, data)
         return
@@ -928,6 +1010,12 @@ async def process_confirm_go(callback: CallbackQuery, state: FSMContext):
         payload = f"synastry:{job_id}"
         prices = [LabeledPrice(label="Синастрия", amount=SYNASTRY_STARS_PRICE)]
         pay_button_text = f"Рассчитать синастрию — {SYNASTRY_STARS_PRICE} ⭐"
+    elif report_type == "natal":
+        title = "Натальная карта"
+        description = f"Персональный разбор натальной карты — {NATAL_STARS_PRICE} ⭐"
+        payload = f"natal:{job_id}"
+        prices = [LabeledPrice(label="Натальная карта", amount=NATAL_STARS_PRICE)]
+        pay_button_text = f"Рассчитать натальную карту — {NATAL_STARS_PRICE} ⭐"
     else:
         title = "Разбор соляра на год"
         description = f"Полный астрологический разбор соляра — {SOLAR_STARS_PRICE} ⭐"
@@ -953,6 +1041,8 @@ async def process_confirm_go(callback: CallbackQuery, state: FSMContext):
 def _build_pre_payment_pitch(data: dict, report_type: str) -> str:
     if report_type == "synastry":
         return _build_synastry_pre_payment_pitch(data)
+    if report_type == "natal":
+        return _build_natal_pre_payment_pitch(data)
     return _build_solar_pre_payment_pitch(data)
 
 
@@ -1030,6 +1120,16 @@ def _build_synastry_pre_payment_pitch(data: dict) -> str:
     )
 
 
+def _build_natal_pre_payment_pitch(data: dict) -> str:
+    return (
+        "Данные приняты.\n\n"
+        "По ним можно построить персональную натальную карту: характер и внутренние "
+        "потребности, мышление, отношения, энергия, деньги, реализация, сильные стороны "
+        "и зоны роста. Разбор основан на реальных положениях планет, домов и аспектов.\n\n"
+        f"Полный разбор в PDF — {NATAL_STARS_PRICE} ⭐."
+    )
+
+
 @router.pre_checkout_query()
 async def process_pre_checkout(query: PreCheckoutQuery):
     await query.answer(ok=True)
@@ -1095,6 +1195,9 @@ async def process_successful_payment(message: Message, state: FSMContext):
     if report_type == "synastry":
         await message.answer("Оплата получена ⭐ Готовлю полную расшифровку синастрии...")
         await _run_synastry_analysis(message, message.from_user, data, active_job_id)
+    elif report_type == "natal":
+        await message.answer("Оплата получена ⭐ Готовлю натальную карту...")
+        await _run_natal_analysis(message, message.from_user, data, active_job_id)
     else:
         await message.answer("Оплата получена ⭐ Готовлю полную расшифровку соляра...")
         await _run_solar_analysis(message, message.from_user, data, active_job_id)
@@ -1115,7 +1218,7 @@ async def cmd_stats(message: Message):
         return
 
     summary = funnel_summary()
-    selected_events = ("solar_selected", "synastry_selected")
+    selected_events = ("solar_selected", "synastry_selected", "natal_selected")
     sources = list_sources()
 
     def count(event: str) -> int:
@@ -1177,6 +1280,18 @@ async def cmd_stats(message: Message):
         ("увидели кнопку оплаты", ("synastry_payment_invoice_sent", "synastry_payment_started")),
         ("успешно оплатили", "synastry_payment_success"),
     ]
+    natal_steps = [
+        ("выбрали натальную карту", "natal_selected"),
+        ("ввели имя", "natal_name_entered"),
+        ("ввели дату рождения", "natal_birth_date_entered"),
+        ("ввели время рождения", "natal_birth_time_entered"),
+        ("выбрали город рождения", "natal_birth_place_entered"),
+        ("добавили/пропустили запрос", "natal_context_done"),
+        ("увидели подтверждение", "natal_confirmation_shown"),
+        ("нажали «Всё верно»", "natal_payment_started"),
+        ("увидели кнопку оплаты", ("natal_payment_invoice_sent", "natal_payment_started")),
+        ("успешно оплатили", "natal_payment_success"),
+    ]
 
     lines = ["📊 Воронка (уникальные пользователи):"]
     lines.append(f"\nОбщий старт: {count('start')}")
@@ -1185,6 +1300,7 @@ async def cmd_stats(message: Message):
     lines.append(f"Не выбрали тип разбора: {max(count('start') - selected_total, 0)}")
     lines.extend(funnel_block("🌞 Соляр", solar_steps))
     lines.extend(funnel_block("💞 Синастрия", synastry_steps))
+    lines.extend(funnel_block("🪐 Натальная карта", natal_steps))
 
     solar_generated = count("solar_generated")
     solar_paid_generated = max(
@@ -1196,6 +1312,11 @@ async def cmd_stats(message: Message):
         count("synastry_generated_after_payment"),
         paid_generated("synastry"),
     )
+    natal_generated = count("natal_generated")
+    natal_paid_generated = max(
+        count("natal_generated_after_payment"),
+        paid_generated("natal"),
+    )
     lines.append("\n📄 Файлы / выдачи:")
     lines.append(
         f"соляр — всего файлов: {solar_generated}; после оплаты: {solar_paid_generated}; "
@@ -1204,6 +1325,10 @@ async def cmd_stats(message: Message):
     lines.append(
         f"синастрия — всего файлов: {synastry_generated}; после оплаты: {synastry_paid_generated}; "
         f"бесплатно/тест/старый режим: {max(synastry_generated - synastry_paid_generated, 0)}"
+    )
+    lines.append(
+        f"натальная карта — всего файлов: {natal_generated}; после оплаты: {natal_paid_generated}; "
+        f"бесплатно/тест: {max(natal_generated - natal_paid_generated, 0)}"
     )
 
     lines.append("\n📍 Все входы по меткам (?start=..., уникальные люди):")
@@ -1216,7 +1341,7 @@ async def cmd_stats(message: Message):
     lines.append("\n💳 Реальные оплаты по меткам:")
     payments = payment_summary()
     if payments:
-        report_names = {"solar": "соляр", "synastry": "синастрия"}
+        report_names = {"solar": "соляр", "synastry": "синастрия", "natal": "натальная карта"}
         for report_type, currency, source, payment_count, amount in payments:
             lines.append(
                 f"{report_names.get(report_type, report_type)} · {source}: "
@@ -1231,6 +1356,120 @@ async def cmd_stats(message: Message):
 # ---------------------------------------------------------------------------
 # Сам расчёт + потоковая генерация разбора + pdf-файл
 # ---------------------------------------------------------------------------
+
+
+async def _run_natal_analysis(
+    answer_target, from_user: User, data: dict, job_id: str | None = None
+) -> None:
+    try:
+        await _generate_natal_analysis(answer_target, from_user, data, job_id)
+    finally:
+        if job_id:
+            finish_payment_job(job_id, from_user.id)
+
+
+async def _generate_natal_analysis(
+    answer_target, from_user: User, data: dict, job_id: str | None
+) -> None:
+    birth_place = data["birth_place"]
+    day, month, year = (int(x) for x in data["birth_date"].split("."))
+    birth_time = data.get("birth_time")
+    if birth_time:
+        hour, minute = (int(x) for x in birth_time.split(":"))
+        time_note = ""
+    else:
+        hour, minute = 12, 0
+        time_note = (
+            "\n\nТочное время рождения неизвестно: расчёт выполнен на 12:00. "
+            "Выводы по домам, Асценденту и MC считаются ориентировочными."
+        )
+
+    progress = await answer_target.answer(
+        "⏳ Натальная карта построена. Готовлю персональную расшифровку..." + time_note
+    )
+    try:
+        timezone = get_timezone(birth_place["lat"], birth_place["lon"])
+        chart_data = compute_natal_chart(
+            birth_year=year,
+            birth_month=month,
+            birth_day=day,
+            birth_hour=hour,
+            birth_minute=minute,
+            birth_tz=timezone,
+            birth_lat=birth_place["lat"],
+            birth_lon=birth_place["lon"],
+            birth_place_label=birth_place["label"],
+        )
+        if not birth_time:
+            chart_data["header"] += time_note
+    except Exception as exc:
+        await progress.edit_text(f"Не удалось рассчитать натальную карту: {exc}")
+        return
+
+    prompt = build_natal_prompt(
+        chart_data,
+        person_name=data.get("person_name", ""),
+        user_context=data.get("user_context"),
+    )
+    try:
+        buffer, stop_reason = await interpret_solar_chart(prompt)
+    except Exception as exc:
+        await progress.edit_text(f"Не удалось подготовить разбор: {exc}")
+        return
+
+    if job_id and is_payment_job_cancelled(job_id, from_user.id):
+        return
+
+    teaser = extract_main_theme(buffer) or "Натальная карта готова — полный разбор в PDF."
+    if stop_reason == "max_tokens":
+        teaser += "\n\n⚠️ Ответ мог быть сокращён из-за ограничения длины."
+    try:
+        await progress.edit_text(teaser[:4000])
+    except Exception:
+        await answer_target.answer(teaser[:4000])
+
+    file_status = await answer_target.answer("📄 Формирую PDF с натальной картой...")
+    output_path = f"/tmp/natal_{from_user.id}_{int(time.time())}.pdf"
+    plain_markdown_to_pdf(
+        f"Натальная карта {data.get('person_name', '')}".strip(),
+        buffer,
+        output_path,
+    )
+
+    if job_id and is_payment_job_cancelled(job_id, from_user.id):
+        if os.path.exists(output_path):
+            os.remove(output_path)
+        return
+
+    safe_name = re.sub(r'[\\/:*?"<>|]', "", data.get("person_name", "")).strip()
+    filename = re.sub(r"\s+", " ", f"Натальная карта {safe_name} {data['birth_date']}.pdf")
+    save_report_artifact(
+        user_id=from_user.id,
+        report_type="natal",
+        job_id=job_id,
+        prompts=[{"kind": "natal_markdown", "prompt": prompt}],
+        response_text=buffer,
+        filename=filename,
+    )
+    _log_generated_event(from_user.id, data, "natal")
+    try:
+        await answer_target.answer_document(FSInputFile(output_path, filename=filename))
+        await file_status.delete()
+    except Exception:
+        await file_status.edit_text("Готово ✅ (файл выше)")
+    finally:
+        if os.path.exists(output_path):
+            os.remove(output_path)
+
+    buttons = [
+        [InlineKeyboardButton(text="🪐 Рассчитать ещё одну натальную карту", callback_data="restart:natal")],
+        [InlineKeyboardButton(text="🌞 Рассчитать соляр", callback_data="restart:solar")],
+        [InlineKeyboardButton(text="💞 Рассчитать синастрию", callback_data="restart:synastry")],
+    ]
+    await answer_target.answer(
+        "Готово! Если нужен ещё один разбор:",
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=buttons),
+    )
 
 
 async def _run_solar_analysis(
@@ -1406,6 +1645,7 @@ async def _generate_solar_analysis(
     kb = InlineKeyboardMarkup(
         inline_keyboard=[
             [InlineKeyboardButton(text="🔄 Рассчитать другой соляр", callback_data="restart:solar")],
+            [InlineKeyboardButton(text="🪐 Рассчитать натальную карту", callback_data="restart:natal")],
             [InlineKeyboardButton(text="💞 Рассчитать синастрию", callback_data="restart:synastry")],
         ]
     )
@@ -1605,6 +1845,7 @@ async def _generate_synastry_analysis(
     kb = InlineKeyboardMarkup(
         inline_keyboard=[
             [InlineKeyboardButton(text="💞 Рассчитать ещё одну синастрию", callback_data="restart:synastry")],
+            [InlineKeyboardButton(text="🪐 Рассчитать натальную карту", callback_data="restart:natal")],
             [InlineKeyboardButton(text="🌞 Рассчитать соляр", callback_data="restart:solar")],
         ]
     )
