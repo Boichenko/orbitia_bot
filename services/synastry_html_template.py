@@ -79,8 +79,10 @@ def render_synastry_html(report: dict) -> str:
         "LONGTERM_PERIODS": _period_cards(longterm.get("periods")),
         "FIRST_INFLUENCE_TITLE": _safe(first_influence.get("title")),
         "FIRST_INFLUENCE_ITEMS": _list_items(first_influence.get("items"), 4),
+        "FIRST_INFLUENCE_NOTE": _first_list_item(first_influence.get("items")),
         "PARTNER_INFLUENCE_TITLE": _safe(partner_influence.get("title")),
         "PARTNER_INFLUENCE_ITEMS": _list_items(partner_influence.get("items"), 4),
+        "PARTNER_INFLUENCE_NOTE": _first_list_item(partner_influence.get("items")),
         "RESOURCE_CARDS": _resource_cards(report.get("resources")),
         "RISK_CARDS": _risk_cards(report.get("risks")),
         "RECOMMENDATIONS": _recommendations(report.get("recommendations")),
@@ -89,6 +91,7 @@ def render_synastry_html(report: dict) -> str:
         "FINAL_KEEPS": _safe(final.get("keeps")),
         "FINAL_BREAKS": _safe(final.get("breaks")),
         "FINAL_GROWTH": _safe(final.get("growth")),
+        "FINAL_LENGTH_CLASS": _final_length_class(final.get("text")),
     }
 
     html = _read_text(_HTML_TEMPLATE)
@@ -288,6 +291,12 @@ def _list_items(items, limit: int = 4) -> str:
     return "".join(f"<li>{_safe(item)}</li>" for item in items[:limit])
 
 
+def _first_list_item(items) -> str:
+    if not isinstance(items, list) or not items:
+        return "Влияние раскрывается через ежедневные реакции, поддержку и честную обратную связь."
+    return _safe(items[0])
+
+
 def _love_items(items) -> str:
     if not isinstance(items, list):
         return ""
@@ -417,8 +426,8 @@ def _pillars(items) -> str:
     return "".join(
         f"""
         <div class="pillar">
-          <span>{_safe(item.get("label"))}</span>
-          <b>{_score(item.get("value"))}</b>
+          <div><span>{_safe(item.get("label"))}</span><b>{_score(item.get("value"))}/10</b></div>
+          <i><em style="--fill:{_score(item.get('value')) * 10}%"></em></i>
         </div>
         """
         for item in items[:4]
@@ -432,11 +441,13 @@ def _resource_cards(items) -> str:
     return "".join(
         f"""
         <article class="resource-card">
+          <span class="resource-index">{index:02d}</span>
           <h3>{_safe(item.get("title"))}</h3>
           <p>{_safe(item.get("text"))}</p>
+          <small>Точка опоры пары</small>
         </article>
         """
-        for item in items[:6]
+        for index, item in enumerate(items[:6], 1)
         if isinstance(item, dict)
     )
 
@@ -444,17 +455,21 @@ def _resource_cards(items) -> str:
 def _risk_cards(items) -> str:
     if not isinstance(items, list):
         return ""
-    return "".join(
-        f"""
-        <article class="risk-card" style="--level:{_risk_level(item.get("level")) * 10}%">
+    cards = []
+    for item in items[:6]:
+        if not isinstance(item, dict):
+            continue
+        level = _risk_level(item.get("level"))
+        tone = "high" if level >= 8 else "medium" if level >= 5 else "low"
+        cards.append(f"""
+        <article class="risk-card risk-{tone}" style="--level:{level * 10}%">
           <h3>{_safe(item.get("title"))}</h3>
           <small>{_safe(item.get("level"))}</small>
           <p>{_safe(item.get("text"))}</p>
+          <div class="risk-meter"><i></i></div>
         </article>
-        """
-        for item in items[:6]
-        if isinstance(item, dict)
-    )
+        """)
+    return "".join(cards)
 
 
 def _risk_level(level) -> int:
@@ -466,6 +481,15 @@ def _risk_level(level) -> int:
     if "низ" in text:
         return 3
     return _score(level, 5)
+
+
+def _final_length_class(text) -> str:
+    length = len(str(text or ""))
+    if length > 600:
+        return "final-xlong"
+    if length > 420:
+        return "final-long"
+    return "final-regular"
 
 
 def _recommendations(items) -> str:
