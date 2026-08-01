@@ -43,6 +43,7 @@ from services.payment_jobs import (
     mark_payment_job_active,
 )
 from services.prompt_builder import (
+    build_natal_json_prompt,
     build_natal_prompt,
     build_solar_json_prompt,
     build_solar_prompt,
@@ -52,6 +53,7 @@ from services.prompt_builder import (
 from services.natal_chart import compute_natal_chart
 from services.report_file import extract_main_theme
 from services.report_json import (
+    normalize_natal_report,
     normalize_solar_report,
     normalize_synastry_report,
     parse_report_json,
@@ -62,6 +64,7 @@ from services.report_pdf import (
     markdown_to_pdf,
     plain_markdown_to_pdf,
     structured_solar_to_pdf,
+    structured_natal_to_pdf,
     structured_synastry_to_pdf,
 )
 from services.solar_chart import compute_solar_return
@@ -1406,11 +1409,13 @@ async def _generate_natal_analysis(
         await progress.edit_text(f"Не удалось рассчитать натальную карту: {exc}")
         return
 
-    prompt = build_natal_prompt(
+    prompt = build_natal_json_prompt(
         chart_data,
         person_name=data.get("person_name", ""),
         user_context=data.get("user_context"),
     )
+    used_prompts = [{"kind": "natal_structured_json", "prompt": prompt}]
+    report_json = None
     try:
         buffer, stop_reason = await interpret_solar_chart(prompt)
     except Exception as exc:
@@ -1420,7 +1425,31 @@ async def _generate_natal_analysis(
     if job_id and is_payment_job_cancelled(job_id, from_user.id):
         return
 
-    teaser = extract_main_theme(buffer) or "Натальная карта готова — полный разбор в PDF."
+    try:
+        report_json = normalize_natal_report(
+            parse_report_json(buffer), data.get("person_name", "")
+        )
+    except Exception:
+        fallback_prompt = build_natal_prompt(
+            chart_data,
+            person_name=data.get("person_name", ""),
+            user_context=data.get("user_context"),
+        )
+        used_prompts.append({"kind": "natal_text_fallback", "prompt": fallback_prompt})
+        try:
+            await progress.edit_text(
+                "✍️ Собираю текстовую версию натальной карты, визуальный шаблон не принял данные..."
+            )
+            buffer, stop_reason = await interpret_solar_chart(fallback_prompt)
+        except Exception as exc:
+            await progress.edit_text(f"Не удалось подготовить разбор: {exc}")
+            return
+
+    teaser = (
+        structured_report_to_teaser(report_json)
+        if report_json
+        else extract_main_theme(buffer) or "Натальная карта готова — полный разбор в PDF."
+    )
     if stop_reason == "max_tokens":
         teaser += "\n\n⚠️ Ответ мог быть сокращён из-за ограничения длины."
     try:
@@ -1430,11 +1459,14 @@ async def _generate_natal_analysis(
 
     file_status = await answer_target.answer("📄 Формирую PDF с натальной картой...")
     output_path = f"/tmp/natal_{from_user.id}_{int(time.time())}.pdf"
-    plain_markdown_to_pdf(
-        f"Натальная карта {data.get('person_name', '')}".strip(),
-        buffer,
-        output_path,
-    )
+    if report_json:
+        await structured_natal_to_pdf(report_json, output_path)
+    else:
+        plain_markdown_to_pdf(
+            f"Натальная карта {data.get('person_name', '')}".strip(),
+            buffer,
+            output_path,
+        )
 
     if job_id and is_payment_job_cancelled(job_id, from_user.id):
         if os.path.exists(output_path):
@@ -1447,7 +1479,7 @@ async def _generate_natal_analysis(
         user_id=from_user.id,
         report_type="natal",
         job_id=job_id,
-        prompts=[{"kind": "natal_markdown", "prompt": prompt}],
+        prompts=used_prompts,
         response_text=buffer,
         filename=filename,
     )
@@ -1631,6 +1663,17 @@ async def _generate_solar_analysis(
         response_text=buffer,
         filename=display_filename,
     )
+    public_report = None
+    if report_json:
+        from services.public_reports import create_public_report
+
+        public_report = create_public_report(
+            report_type="solar",
+            pdf_source_path=output_path,
+            filename=display_filename,
+            report_json=report_json,
+            owner_key=f"bot:solar:{from_user.id}:{job_id or int(time.time())}",
+        )
     _log_generated_event(from_user.id, data, "solar")
 
     try:
@@ -1642,8 +1685,16 @@ async def _generate_solar_analysis(
         if os.path.exists(output_path):
             os.remove(output_path)
 
+    result_rows = []
+    if public_report:
+        result_rows.extend(
+            [
+                [InlineKeyboardButton(text="🌐 Открыть отчёт", url=public_report.report_url)],
+                [InlineKeyboardButton(text="📥 Скачать PDF", url=public_report.pdf_url)],
+            ]
+        )
     kb = InlineKeyboardMarkup(
-        inline_keyboard=[
+        inline_keyboard=result_rows + [
             [InlineKeyboardButton(text="🔄 Рассчитать другой соляр", callback_data="restart:solar")],
             [InlineKeyboardButton(text="🪐 Рассчитать натальную карту", callback_data="restart:natal")],
             [InlineKeyboardButton(text="💞 Рассчитать синастрию", callback_data="restart:synastry")],

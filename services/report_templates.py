@@ -27,6 +27,11 @@ SYNASTRY_MAP_KEYS = [
     "risks",
 ]
 
+NATAL_CATEGORY_KEYS = [
+    "identity", "emotions", "mind", "relationships",
+    "energy", "career", "talents", "growth",
+]
+
 
 def _dump_template(template: dict[str, Any]) -> str:
     return json.dumps(template, ensure_ascii=False, indent=2)
@@ -71,8 +76,8 @@ def solar_report_template() -> dict[str, Any]:
                 "key": "career",
                 "title": "Карьера и статус",
                 "score": 8,
-                "summary": "короткий смысл категории: что именно активируется",
-                "main_takeaway": "целостный вывод по категории: ресурс + риск + что делать",
+                "summary": "содержательный вводный абзац: что именно активируется и почему это важно",
+                "main_takeaway": "основной редакторский абзац категории: ресурс + риск + практическая опора",
                 "keywords": ["слово 1", "слово 2", "слово 3"],
                 "amplified": ["3–4 пункта"],
                 "manifestations": ["3–4 пункта"],
@@ -97,6 +102,7 @@ def solar_report_template() -> dict[str, Any]:
                 "key": "relationships",
                 "title": "Отношения",
                 "score": 8,
+                "balance_score": 6,
                 "summary": "короткий смысл категории: что именно активируется",
                 "main_takeaway": "целостный вывод по категории: ресурс + риск + что делать",
                 "keywords": ["слово 1", "слово 2", "слово 3"],
@@ -162,6 +168,7 @@ def solar_report_template() -> dict[str, Any]:
                 "key": "sex",
                 "title": "Секс и эротика",
                 "score": 8,
+                "energy_percent": 80,
                 "summary": "короткий смысл категории: что именно активируется",
                 "main_takeaway": "целостный вывод по категории: ресурс + риск + что делать",
                 "keywords": ["слово 1", "слово 2", "слово 3"],
@@ -367,9 +374,103 @@ def synastry_report_template(first_name: str = "", partner_name: str = "") -> di
     }
 
 
+def natal_report_template(person_name: str = "") -> dict[str, Any]:
+    name = person_name or "Имя"
+    definitions = [
+        ("identity", "Личность", "Солнце, Асцендент и способ проявляться"),
+        ("emotions", "Эмоции", "Луна, безопасность и внутренние потребности"),
+        ("mind", "Мышление", "Меркурий, речь и способ принимать решения"),
+        ("relationships", "Отношения", "Венера, близость и личные границы"),
+        ("energy", "Энергия", "Марс, воля, темп и восстановление"),
+        ("career", "Реализация", "MC, Сатурн, карьера и деньги"),
+        ("talents", "Таланты", "Юпитер, сильные стороны и точки роста"),
+        ("growth", "Путь развития", "Узлы, Плутон, Хирон и взросление"),
+    ]
+    categories = []
+    for key, title, summary in definitions:
+        categories.append({
+            "key": key,
+            "title": title,
+            "score": 8,
+            "summary": summary,
+            "analysis": ["3–5 развёрнутых абзацев по 450–650 знаков каждый"],
+            "main_takeaway": "главный персональный вывод по сфере",
+            "keywords": ["слово 1", "слово 2", "слово 3"],
+            "amplified": ["3–4 конкретных проявления"],
+            "manifestations": ["3–4 жизненных сценария"],
+            "risks": ["2–3 зоны внимания"],
+            "actions": ["3–4 практические рекомендации"],
+            "astro_basis": ["2–4 реальных фактора карты"],
+        })
+    return {
+        "report_kind": "natal",
+        "cover": {
+            "title": f"Натальная карта {name}",
+            "subtitle": "Персональный портрет характера, ресурсов и жизненных сценариев",
+            "birth_data": "дата, время и место рождения",
+            "dominant": "главная доминанта карты",
+            "overall_score": 8,
+            "top_sphere": "ведущая сфера",
+        },
+        "sphere_map": [
+            {"key": key, "title": title, "score": 8, "meaning": summary}
+            for key, title, summary in definitions
+        ],
+        "map_summary": "краткий синтез сильных и требующих внимания сфер",
+        "temperament": {
+            "title": "формула базового темперамента",
+            "text": "развёрнутый синтез доминирующих планет, стихий и качеств",
+            "balance_title": "главный баланс карты",
+            "balance_text": "как сочетание стихий и качеств проявляется в жизни",
+            "planets": [
+                {"label": "ядро", "value": "планета и положение", "meaning": "короткий смысл"}
+                for _ in range(6)
+            ],
+            "elements": [
+                {"name": name, "value": 7} for name in ["Огонь", "Земля", "Воздух", "Вода"]
+            ],
+            "qualities": [
+                {"name": name, "value": 7} for name in ["Кардинальность", "Фиксированность", "Мутабельность"]
+            ],
+        },
+        "main_theme": {
+            "title": "ёмкая формула личности",
+            "text": "2–3 содержательных абзаца",
+            "accents": ["акцент 1", "акцент 2", "акцент 3"],
+            "additional_accents": [
+                {"title": "акцент", "text": "короткое пояснение"},
+                {"title": "акцент", "text": "короткое пояснение"},
+                {"title": "акцент", "text": "короткое пояснение"},
+            ],
+        },
+        "categories": categories,
+        "risk_summary": [
+            {"title": "риск", "level": 7, "risk": "как проявляется", "support": "что поможет"}
+            for _ in range(4)
+        ],
+        "opportunities": [
+            {"title": "ресурс", "text": "как раскрывать и применять"}
+            for _ in range(4)
+        ],
+        "plan": [{"step": index, "action": "практическое действие"} for index in range(1, 6)],
+        "signature": {
+            "title": "Сигнатура карты",
+            "elements": ["3 ключевые доминанты"],
+            "positions": ["4 ключевых положения"],
+            "aspects": ["4 ключевых аспекта"],
+            "final_formula": "финальный портрет и главная рекомендация",
+        },
+        "final_formula": "итоговая формула личности",
+    }
+
+
 def solar_report_template_text() -> str:
     return _dump_template(solar_report_template())
 
 
 def synastry_report_template_text(first_name: str = "", partner_name: str = "") -> str:
     return _dump_template(synastry_report_template(first_name, partner_name))
+
+
+def natal_report_template_text(person_name: str = "") -> str:
+    return _dump_template(natal_report_template(person_name))

@@ -5,7 +5,7 @@ import re
 import tempfile
 import time
 from dataclasses import dataclass
-from typing import Optional
+from typing import Any, Optional
 
 from services.claude_client import interpret_solar_chart
 from services.prompt_builder import (
@@ -33,6 +33,7 @@ class GeneratedReport:
     path: str
     filename: str
     teaser: str
+    report_json: dict[str, Any] | None = None
 
 
 def _parse_date(value: str) -> tuple[int, int, int]:
@@ -130,7 +131,12 @@ async def generate_solar_report(data: dict) -> GeneratedReport:
 
     name_part = _safe_filename(data.get("person_name", ""))
     display_name = f"{name_part} {data['birth_date']} {cycle_year}-{cycle_year + 1}".strip()
-    return GeneratedReport(path=output_path, filename=f"{display_name}.pdf", teaser=teaser)
+    return GeneratedReport(
+        path=output_path,
+        filename=f"{display_name}.pdf",
+        teaser=teaser,
+        report_json=report_json,
+    )
 
 
 async def generate_synastry_report(data: dict) -> GeneratedReport:

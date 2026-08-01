@@ -2,100 +2,87 @@
 <html lang="ru">
 <head>
   <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="robots" content="noindex,nofollow,noarchive">
   <style>
 {{SOLAR_REPORT_CSS}}
   </style>
 </head>
 <body>
+  {{WEB_DOWNLOAD_BUTTON}}
   <section class="page cover-page">
-    <div class="cover-copy">
-      <div class="kicker">персональный годовой отчёт</div>
+    <div class="cover-content">
+      <div class="cover-kicker">персональный годовой отчёт</div>
       <h1>{{COVER_TITLE}}</h1>
       <p>{{COVER_SUBTITLE}}</p>
       <dl class="cover-meta">
         <div><dt>Период</dt><dd>{{COVER_PERIOD}}</dd></div>
         <div><dt>Место соляра</dt><dd>{{COVER_PLACE}}</dd></div>
-        <div><dt>Общий балл года</dt><dd>{{COVER_SCORE}}<span>/10</span></dd></div>
-        <div><dt>Топ-сфера</dt><dd>{{COVER_TOP}}</dd></div>
+        <div><dt>Общий балл года</dt><dd class="cover-score">{{COVER_SCORE}} <span>/ 10</span></dd></div>
+        <div><dt>Топ-сферы</dt><dd>{{COVER_TOP}}</dd></div>
       </dl>
     </div>
-    <div class="cover-art">{{COVER_ART}}</div>
   </section>
 
-  <section class="page wheel-page">
+  <section class="page overview-page">
     <div class="section-head">
       <span>01</span>
       <b>Карта года</b>
     </div>
     <div class="wheel-layout">
       <div>
-        <h2>Год в одном экране</h2>
+        <h2>Колесо сфер</h2>
         <p class="lead">Радар показывает, какие сферы жизни в этом году активированы сильнее всего. Чем дальше точка от центра, тем плотнее событийная нагрузка.</p>
         <div class="score-table">{{SPHERE_ROWS}}</div>
       </div>
       <div class="radar-card">{{RADAR_SVG}}</div>
     </div>
-    <div class="map-analysis">
-      <span>Краткий анализ</span>
-      <p>{{MAP_SUMMARY}}</p>
-    </div>
-  </section>
-
-  <section class="page theme-page">
-    <div class="section-head">
+    <div class="section-head overview-theme-head">
       <span>02</span>
       <b>Главная тема</b>
     </div>
-    <div class="theme-card">
+    <div class="overview-theme-card">
       <div class="eyebrow">главная тема года</div>
       <h2>{{THEME_TITLE}}</h2>
       <p>{{THEME_TEXT}}</p>
-      <div class="theme-pills">{{THEME_PILLS}}</div>
-    </div>
-    <div class="accent-block">
-      <div class="eyebrow">дополнительные акценты</div>
-      <div class="accent-grid">{{ADDITIONAL_ACCENTS}}</div>
     </div>
   </section>
 
   {{CATEGORY_PAGES}}
 
-  <section class="page summary-page">
-    <div class="section-head">
-      <span>04</span>
-      <b>Сводка рисков</b>
+  <section class="page summary-page summary-combined-page">
+    <div class="summary-block summary-risks">
+      <div class="section-head">
+        <span>04</span>
+        <b>Сводка рисков</b>
+      </div>
+      <div class="risk-grid">{{RISK_ROWS}}</div>
     </div>
-    <h2>Где нужна осторожность</h2>
-    <p class="lead">Эта страница собирает места, где год может давать перегруз, самообман, конфликт или расфокус. Это не запрет, а карта внимательности.</p>
-    <div class="risk-grid">{{RISK_ROWS}}</div>
+    <div class="summary-block summary-opportunities">
+      <div class="section-head">
+        <span>05</span>
+        <b>Сводка возможностей</b>
+      </div>
+      <div class="opportunity-grid">{{OPPORTUNITY_CARDS}}</div>
+    </div>
   </section>
 
-  <section class="page summary-page">
-    <div class="section-head">
-      <span>05</span>
-      <b>Сводка возможностей</b>
+  <section class="page summary-page plan-heatmap-page">
+    <div class="plan-section">
+      <div class="section-head">
+        <span>06</span>
+        <b>Практический план</b>
+      </div>
+      <div class="plan-list"><header><b>Сфера</b><span>Что сделать</span></header>{{PLAN_STEPS}}</div>
     </div>
-    <h2>Куда вкладываться</h2>
-    <div class="opportunity-grid">{{OPPORTUNITY_CARDS}}</div>
-  </section>
-
-  <section class="page summary-page">
-    <div class="section-head">
-      <span>06</span>
-      <b>Практический план</b>
+    <div class="heatmap-section">
+      <div class="section-head">
+        <span>07</span>
+        <b>Тепловая карта</b>
+      </div>
+      <p class="heatmap-lead">Плотность события по сферам - где в этом году самая высокая температура, а где нужен отдых и наблюдение.</p>
+      <div class="heatmap-grid">{{HEATMAP_CARDS}}</div>
     </div>
-    <h2>5 шагов года</h2>
-    <div class="plan-list">{{PLAN_STEPS}}</div>
-    <div class="final-formula">{{FINAL_FORMULA}}</div>
-  </section>
-
-  <section class="page heatmap-page">
-    <div class="section-head">
-      <span>07</span>
-      <b>Тепловая карта</b>
-    </div>
-    <p class="heatmap-lead">Плотность события по сферам - где в этом году самая высокая температура, а где нужен отдых и наблюдение.</p>
-    <div class="heatmap-grid">{{HEATMAP_CARDS}}</div>
   </section>
 </body>
 </html>

@@ -1472,7 +1472,7 @@ def _sphere_cards_for_radar(report: dict) -> list[dict]:
             }
         )
     if cards:
-        return cards[:7]
+        return cards[:8] if report.get("report_kind") == "natal" else cards[:7]
     for index, (key, title) in enumerate(default_titles.items()):
         category = _category_by_key(report, key)
         cards.append(
@@ -1590,6 +1590,30 @@ def _inner_core(category: dict) -> str:
     """
 
 
+def _natal_orbit(category: dict) -> str:
+    keywords = list(category.get("keywords") or ["Характер", "Опора", "Вектор"])
+    keywords = (keywords + ["Опора", "Вектор", "Ресурс"])[:3]
+    return f"""
+    <div class="visual natal-orbit">
+      <span class="orbit-label orbit-top">{_safe_text(keywords[0])}</span>
+      <span class="orbit-label orbit-left">{_safe_text(keywords[1])}</span>
+      <span class="orbit-label orbit-right">{_safe_text(keywords[2])}</span>
+      <div class="orbit-ring"><div>{_safe_text(category.get('title'), 'Ядро')}</div></div>
+    </div>
+    """
+
+
+def _natal_bars(category: dict) -> str:
+    score = _safe_score(category.get("score"))
+    keywords = list(category.get("keywords") or ["Восприятие", "Выражение", "Решения"])
+    keywords = (keywords + ["Выражение", "Решения", "Фокус"])[:3]
+    return f"""
+    <div class="visual channel-bars natal-bars">
+      {''.join(f'<div class="channel-row"><b>{_safe_text(label)}</b><span><i style="width:{max(20, (score-index)*10)}%"></i></span><em>{max(1, score-index)}/10</em></div>' for index, label in enumerate(keywords))}
+    </div>
+    """
+
+
 def _category_visual(key: str, category: dict) -> str:
     return {
         "career": _growth_ladder,
@@ -1599,15 +1623,27 @@ def _category_visual(key: str, category: dict) -> str:
         "health": _battery,
         "communication": _communication_bars,
         "inner": _inner_core,
+        "identity": _natal_orbit,
+        "emotions": _natal_orbit,
+        "mind": _natal_bars,
+        "energy": _battery,
+        "talents": _natal_orbit,
+        "growth": _natal_bars,
     }.get(key, _growth_ladder)(category)
 
 
 def _structured_category_page(key: str, report: dict) -> str:
     category = _category_by_key(report, key)
     score = _safe_score(category.get("score"))
+    if score >= 8:
+        accent, accent_rgb = "#FFC66D", "255,198,109"
+    elif score >= 6:
+        accent, accent_rgb = "#7A5CFF", "122,92,255"
+    else:
+        accent, accent_rgb = "#A75BDC", "167,91,220"
     return f"""
     <section class="structured-page category-page">
-      <div class="category-shell">
+      <div class="category-shell" style="--accent:{accent};--accent-rgb:{accent_rgb}">
         <header class="category-header">
           <div>
             <div class="section-mark">Категория</div>
@@ -1626,6 +1662,7 @@ def _structured_category_page(key: str, report: dict) -> str:
 
 
 def _structured_solar_html(report: dict) -> str:
+    is_natal = report.get("report_kind") == "natal"
     cover = report.get("cover") or {}
     theme = report.get("main_theme") or {}
     cards = _sphere_cards_for_radar(report)
@@ -1643,9 +1680,14 @@ def _structured_solar_html(report: dict) -> str:
         f"<article><b>{_safe_text(item.get('title') if isinstance(item, dict) else item)}</b><span>{_safe_text(item.get('text') if isinstance(item, dict) else '')}</span></article>"
         for item in extra_accents_source[:3]
     )
+    category_keys = (
+        ["identity", "emotions", "mind", "relationships", "energy", "career", "talents", "growth"]
+        if is_natal
+        else ["career", "money", "relationships", "home", "health", "communication", "inner"]
+    )
     category_pages = "\n".join(
         _structured_category_page(key, report)
-        for key in ["career", "money", "relationships", "home", "health", "communication", "inner"]
+        for key in category_keys
     )
     risk_rows = "\n".join(
         f"""
@@ -1658,13 +1700,37 @@ def _structured_solar_html(report: dict) -> str:
         for item in (report.get("risk_summary") or [])[:4]
     )
     opportunity_cards = "\n".join(
-        f"<article><i></i><h3>{_safe_text(item.get('title'))}</h3><p>{_safe_text(item.get('text'))}</p></article>"
-        for item in (report.get("opportunities") or [])[:4]
+        f"<article style=\"--accent:{'#FFC66D' if index % 2 == 0 else '#7A5CFF'};--accent-rgb:{'255,198,109' if index % 2 == 0 else '122,92,255'}\"><i></i><h3>{_safe_text(item.get('title'))}</h3><p>{_safe_text(item.get('text'))}</p></article>"
+        for index, item in enumerate((report.get("opportunities") or [])[:4])
     )
     plan_steps = "\n".join(
         f"<div class=\"plan-step\"><b>{_safe_text(item.get('step'))}</b><span>{_safe_text(item.get('action'))}</span></div>"
         for item in (report.get("plan") or [])[:5]
     )
+    signature = report.get("signature") or {}
+    signature_page = ""
+    if is_natal:
+        signature_page = f"""
+        <section class="structured-page summary-page signature-page">
+          <div class="section-mark">Финальный портрет</div>
+          <h2>{_safe_text(signature.get('title'), 'Сигнатура карты')}</h2>
+          <div class="signature-grid">
+            <article><h3>Доминанты</h3><ul>{_structured_items(signature.get('elements'))}</ul></article>
+            <article><h3>Ключевые положения</h3><ul>{_structured_items(signature.get('positions'))}</ul></article>
+            <article><h3>Ключевые аспекты</h3><ul>{_structured_items(signature.get('aspects'))}</ul></article>
+          </div>
+          <div class="final-formula">{_safe_text(signature.get('final_formula'))}</div>
+        </section>
+        """
+
+    first_metric_label = "Данные рождения" if is_natal else "Период"
+    first_metric_value = cover.get("birth_data") if is_natal else cover.get("period")
+    second_metric_label = "Доминанта" if is_natal else "Место"
+    second_metric_value = cover.get("dominant") if is_natal else cover.get("place")
+    map_mark = "Карта личности" if is_natal else "Карта сфер года"
+    map_title = "Личность в одном экране" if is_natal else "Год в одном экране"
+    theme_mark = "Главная формула личности" if is_natal else "Главная тема года"
+    plan_title = "5 личных опор" if is_natal else "5 шагов года"
 
     return f"""<!doctype html>
 <html lang="ru">
@@ -1679,7 +1745,7 @@ def _structured_solar_html(report: dict) -> str:
     .cover-hero {{ height:100%; border:1px solid rgba(214,181,109,.55); border-radius:8mm; padding:18mm; display:grid; grid-template-columns:1.05fr .95fr; gap:10mm; align-items:center; }}
     .cover-copy {{ min-width:0; }}
     .cover-hero .kicker,.section-mark {{ color:#D6B56D; font-size:9px; font-weight:800; letter-spacing:4px; text-transform:uppercase; }}
-    .cover-hero h1 {{ margin:9mm 0 3mm; font-size:50px; line-height:1; }}
+    .cover-hero h1 {{ margin:9mm 0 3mm; font-size:38px; line-height:1.03; overflow-wrap:normal; word-break:normal; }}
     .cover-hero p {{ max-width:118mm; color:rgba(245,239,223,.72); font-size:15px; line-height:1.55; }}
     .cover-metrics {{ display:grid; grid-template-columns:repeat(2,1fr); gap:4mm; margin-top:18mm; }}
     .cover-metrics div {{ border-top:1px solid rgba(214,181,109,.35); padding-top:4mm; }}
@@ -1750,6 +1816,13 @@ def _structured_solar_html(report: dict) -> str:
     .inner-core {{ position:relative; display:grid; place-items:center; }}
     .inner-core div {{ width:38mm; height:38mm; border-radius:50%; display:grid; place-items:center; background:rgba(122,92,255,.28); border:1px solid #D6B56D; color:#D6B56D; font-weight:800; }}
     .core-label {{ position:absolute; color:rgba(245,239,223,.72); font-size:11px; }} .core-label.top {{ top:10mm; }} .core-label.left {{ left:8mm; bottom:20mm; }} .core-label.right {{ right:5mm; bottom:20mm; }}
+    .natal-orbit {{ position:relative; display:grid; place-items:center; }}
+    .orbit-ring {{ width:50mm; height:50mm; border:1px solid #D6B56D; border-radius:50%; display:grid; place-items:center; box-shadow:0 0 35px rgba(122,92,255,.24), inset 0 0 32px rgba(122,92,255,.18); }}
+    .orbit-ring:before {{ content:""; position:absolute; width:68mm; height:68mm; border:1px solid rgba(214,181,109,.18); border-radius:50%; }}
+    .orbit-ring div {{ max-width:42mm; color:#D6B56D; font-size:15px; font-weight:800; text-align:center; z-index:2; }}
+    .orbit-label {{ position:absolute; z-index:3; padding:1.5mm 2.5mm; border-radius:99px; background:#211936; color:rgba(245,239,223,.76); font-size:9px; }}
+    .orbit-top {{ top:7mm; }} .orbit-left {{ left:3mm; bottom:12mm; }} .orbit-right {{ right:3mm; bottom:12mm; }}
+    .natal-bars {{ align-content:center; }}
     .category-summary {{ color:rgba(245,239,223,.86); font-size:17px; line-height:1.45; margin:0 0 8mm; }}
     .category-columns {{ display:grid; grid-template-columns:1fr 1fr; gap:5mm; }}
     .category-columns div {{ break-inside:avoid; }}
@@ -1766,6 +1839,37 @@ def _structured_solar_html(report: dict) -> str:
     .plan-step {{ display:grid; grid-template-columns:12mm 1fr; gap:4mm; align-items:center; }}
     .plan-step b {{ width:10mm; height:10mm; border-radius:50%; display:grid; place-items:center; background:#D6B56D; color:#171225; }}
     .final-formula {{ margin-top:10mm; padding:8mm; border-left:2mm solid #D6B56D; background:rgba(255,255,255,.035); color:rgba(245,239,223,.78); line-height:1.55; }}
+    .signature-grid {{ display:grid; grid-template-columns:repeat(3,1fr); gap:6mm; margin-top:14mm; }}
+    .signature-grid article {{ min-height:88mm; border:1px solid rgba(214,181,109,.18); border-radius:6mm; padding:7mm; background:rgba(255,255,255,.035); }}
+    .signature-grid h3 {{ color:#D6B56D; font-size:19px; }}
+    .signature-grid li {{ margin-bottom:4mm; color:rgba(245,239,223,.76); font-size:11px; line-height:1.45; }}
+    /* Актуальная палитра соляра/синастрии: ночной фиолетовый, тёплое золото,
+       сливочный текст и более светлые стеклянные поверхности. */
+    body {{ background:#080614; color:#f8f1df; }}
+    .structured-page {{
+      background:
+        radial-gradient(circle at 10% 20%, rgba(255,255,255,.28) 0 1px, transparent 1.5px),
+        radial-gradient(circle at 84% 24%, rgba(255,255,255,.20) 0 1px, transparent 1.5px),
+        radial-gradient(circle at 82% 14%, rgba(125,56,166,.34), transparent 34%),
+        radial-gradient(circle at 12% 82%, rgba(157,63,90,.20), transparent 42%),
+        linear-gradient(135deg,#070514 0%,#110b25 48%,#1b0d2a 100%);
+    }}
+    .cover-hero,.category-shell {{ border-color:rgba(255,198,109,.38); background:rgba(255,255,255,.018); }}
+    .cover-hero .kicker,.section-mark,.category-columns h4,.additional-accents h3 {{ color:#f3bd62; }}
+    .cover-hero h1,.sphere-grid-page h2,.theme-card h2,.category-header h2,.summary-page h2 {{ color:#fff9ea; }}
+    .cover-hero p,.category-summary {{ color:#d8d1e6; }}
+    .cover-art,.radar-panel,.visual,.additional-grid article,.risk-heat-row,.opportunity-grid article,.plan-step,.signature-grid article {{
+      border-color:rgba(255,231,179,.18);
+      background-color:rgba(255,255,255,.05);
+      box-shadow:inset 0 0 42px rgba(255,198,109,.045);
+    }}
+    .radar-line {{ stroke:#ffc66d; }}
+    .radar-area {{ fill:rgba(122,92,255,.38); }}
+    .score-row b,.visual-score,.category-header strong,.orbit-ring div,.signature-grid h3,.risk-heat-row b,.opportunity-grid h3 {{ color:#ffc66d; }}
+    .category-divider {{ background:linear-gradient(90deg,transparent,rgba(255,198,109,.62),transparent); }}
+    .theme-card,.final-formula {{ border-left-color:#ffc66d; background:rgba(255,255,255,.06); }}
+    .orbit-ring {{ border-color:#ffc66d; background:radial-gradient(circle,rgba(122,92,255,.34),rgba(122,92,255,.08) 58%,transparent 60%); box-shadow:0 0 42px rgba(122,92,255,.34); }}
+    .channel-row i,.plan-step b,.opportunity-grid i {{ background:#ffc66d; }}
   </style>
 </head>
 <body>
@@ -1775,8 +1879,8 @@ def _structured_solar_html(report: dict) -> str:
       <h1>{_safe_text(cover.get('title'), 'Соляр')}</h1>
       <p>{_safe_text(cover.get('subtitle'), 'Персональный прогноз по сферам жизни')}</p>
       <div class="cover-metrics">
-        <div><span>Период</span><b>{_safe_text(cover.get('period'))}</b></div>
-        <div><span>Место</span><b>{_safe_text(cover.get('place'))}</b></div>
+        <div><span>{first_metric_label}</span><b>{_safe_text(first_metric_value)}</b></div>
+        <div><span>{second_metric_label}</span><b>{_safe_text(second_metric_value)}</b></div>
         <div><span>Общий балл</span><b>{_safe_score(cover.get('overall_score'))}/10</b></div>
         <div><span>Топ-сфера</span><b>{_safe_text(cover.get('top_sphere'))}</b></div>
       </div>
@@ -1784,26 +1888,33 @@ def _structured_solar_html(report: dict) -> str:
     <div class="cover-art">{f'<img src="{chart_image}" alt="" />' if chart_image else ''}</div>
   </div></section>
   <section class="structured-page sphere-grid-page">
-    <div class="section-mark">Карта сфер года</div>
-    <h2>Год в одном экране</h2>
+    <div class="section-mark">{map_mark}</div>
+    <h2>{map_title}</h2>
     <div class="sphere-layout"><div class="radar-panel">{_radar_svg(cards)}</div><div class="score-list">{score_rows}</div></div>
     <div class="map-summary">{_safe_text(report.get('map_summary'), 'Карта сфер показывает, где год даёт максимум движения, а где важнее действовать спокойнее. Самые высокие баллы формируют главный ресурс периода, низкие — зоны внимания и бережной настройки.')}</div>
   </section>
   <section class="structured-page">
-    <div class="section-mark">Главная тема года</div>
+    <div class="section-mark">{theme_mark}</div>
     <div class="theme-card"><h2>{_safe_text(theme.get('title'))}</h2><p>{_safe_text(theme.get('text'))}</p><div class="theme-pills">{accents}</div></div>
     <div class="additional-accents"><h3>Дополнительные акценты</h3><div class="additional-grid">{extra_accents}</div></div>
   </section>
   {category_pages}
   <section class="structured-page summary-page"><div class="section-mark">Сводка рисков</div><h2>Heatmap рисков</h2><div class="summary-grid">{risk_rows}</div></section>
   <section class="structured-page summary-page"><div class="section-mark">Сводка возможностей</div><h2>4 карточки возможностей</h2><div class="opportunity-grid">{opportunity_cards}</div></section>
-  <section class="structured-page summary-page"><div class="section-mark">Практический план</div><h2>5 шагов года</h2><div class="plan-list">{plan_steps}</div><div class="final-formula">{_safe_text(report.get('final_formula'))}</div></section>
+  <section class="structured-page summary-page"><div class="section-mark">Практический план</div><h2>{plan_title}</h2><div class="plan-list">{plan_steps}</div><div class="final-formula">{_safe_text(report.get('final_formula'))}</div></section>
+  {signature_page}
 </body>
 </html>"""
 
 
 async def structured_solar_to_pdf(report: dict, output_path: str) -> None:
     await _html_string_to_pdf(render_solar_html(report), output_path)
+
+
+async def structured_natal_to_pdf(report: dict, output_path: str) -> None:
+    from services.natal_html_template import render_natal_editorial_html
+
+    await _html_string_to_pdf(render_natal_editorial_html(report), output_path)
 
 
 def _synastry_map_cards(report: dict) -> list[dict]:

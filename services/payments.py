@@ -13,6 +13,7 @@ from typing import Any, Literal
 import httpx
 
 from services.report_runner import generate_solar_report, generate_synastry_report
+from services.public_reports import create_public_report, get_public_report_by_owner
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(__file__))
 DATA_DIR = os.getenv("ORBITIA_DATA_DIR", os.path.join(PROJECT_ROOT, "data"))
@@ -328,6 +329,14 @@ async def ensure_order_report(order: Order) -> Order:
     if not is_order_paid(order):
         raise PermissionError("Заказ ещё не оплачен")
     if order.report_path and os.path.exists(order.report_path):
+        if not get_public_report_by_owner(f"order:{order.order_id}"):
+            create_public_report(
+                report_type=order.report_type,
+                pdf_source_path=order.report_path,
+                filename=order.report_filename or f"orbitia-{order.order_id}.pdf",
+                report_json=None,
+                owner_key=f"order:{order.order_id}",
+            )
         return order
 
     report = (
@@ -341,10 +350,18 @@ async def ensure_order_report(order: Order) -> Order:
     order.report_path = output_path
     order.report_filename = safe_filename
     _update_order(order)
+    create_public_report(
+        report_type=order.report_type,
+        pdf_source_path=output_path,
+        filename=safe_filename,
+        report_json=report.report_json,
+        owner_key=f"order:{order.order_id}",
+    )
     return order
 
 
 def public_order(order: Order) -> dict[str, Any]:
+    public_report = get_public_report_by_owner(f"order:{order.order_id}")
     return {
         "order_id": order.order_id,
         "payment_id": order.payment_id,
@@ -357,4 +374,6 @@ def public_order(order: Order) -> dict[str, Any]:
         "confirmation_url": order.confirmation_url,
         "report_ready": bool(order.report_path and os.path.exists(order.report_path)),
         "report_filename": order.report_filename,
+        "report_url": public_report.report_url if public_report and public_report.report_json else None,
+        "pdf_url": public_report.pdf_url if public_report else None,
     }

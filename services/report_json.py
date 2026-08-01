@@ -6,7 +6,11 @@ import json
 import re
 from typing import Any
 
-from services.report_templates import solar_report_template, synastry_report_template
+from services.report_templates import (
+    natal_report_template,
+    solar_report_template,
+    synastry_report_template,
+)
 
 
 def parse_report_json(text: str) -> dict[str, Any]:
@@ -77,3 +81,7 @@ def normalize_synastry_report(
     partner_name: str = "",
 ) -> dict[str, Any]:
     return _merge_template(report, synastry_report_template(first_name, partner_name))
+
+
+def normalize_natal_report(report: dict[str, Any], person_name: str = "") -> dict[str, Any]:
+    return _merge_template(report, natal_report_template(person_name))

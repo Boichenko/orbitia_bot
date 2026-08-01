@@ -28,6 +28,10 @@ p {
   margin: 0;
 }
 
+svg text {
+  font-family: Manrope, sans-serif;
+}
+
 .page {
   position: relative;
   width: 210mm;
@@ -109,8 +113,10 @@ p {
 .cover-copy p {
   margin-top: 7mm;
   max-width: 126mm;
-  color: rgba(245, 239, 223, .72);
+  color: rgba(214, 181, 109, .66);
+  font-family: "Cormorant Garamond", Georgia, serif;
   font-size: 14.5px;
+  font-style: italic;
   line-height: 1.55;
 }
 
@@ -389,7 +395,7 @@ p {
 
 .accent-grid b,
 .op-card h3,
-.risk-card b {
+.risk-card h3 {
   display: block;
   color: #f5efdf;
   font-size: 14px;
@@ -419,7 +425,9 @@ p {
   border: 1px solid rgba(214, 181, 109, .18);
   border-radius: 9mm;
   padding: 11mm;
-  background: rgba(255, 255, 255, .018);
+  background:
+    radial-gradient(circle at 82% 10%, rgba(86, 62, 142, .16), transparent 38%),
+    linear-gradient(135deg, rgba(23, 22, 55, .76), rgba(9, 10, 31, .72));
 }
 
 .category-header {
@@ -504,6 +512,17 @@ p {
   margin-top: 0;
 }
 
+.category-meaning {
+  margin-bottom: 5mm;
+}
+
+.category-meaning p {
+  max-width: 100mm;
+  color: rgba(245, 239, 223, .78);
+  font-size: 12px;
+  line-height: 1.48;
+}
+
 .category-columns div {
   break-inside: avoid;
 }
@@ -522,6 +541,29 @@ p {
 
 .category-columns li {
   margin-bottom: .75mm;
+}
+
+.category-actions {
+  margin-top: 5mm;
+}
+
+.category-actions ul {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5mm 5mm;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: rgba(245, 239, 223, .72);
+  font-size: 9.45px;
+  line-height: 1.3;
+}
+
+.category-actions li::before {
+  content: "◆";
+  margin-right: 2mm;
+  color: #d6b56d;
+  font-size: 6px;
 }
 
 .astro-basis {
@@ -562,6 +604,8 @@ p {
   min-height: 76mm;
   padding: 6mm;
   overflow: hidden;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
 }
 
 .visual-title {
@@ -589,7 +633,7 @@ p {
 }
 
 .ladder span.active {
-  background: linear-gradient(90deg, rgba(214, 181, 109, .92), rgba(214, 181, 109, .62), rgba(122, 92, 255, .36));
+  background: linear-gradient(90deg, #f0ce76, #d48417 74%, #b9660e);
 }
 
 .ladder-score {
@@ -705,6 +749,39 @@ p {
   font-size: 8.5px;
 }
 
+.resource-donut {
+  width: 68mm;
+  margin: 4mm auto 0;
+  display: block;
+  overflow: visible;
+}
+
+.resource-donut circle:not(.donut-hole) {
+  fill: none;
+  stroke-width: 34;
+}
+
+.resource-donut .donut-hole {
+  fill: #090a1f;
+  stroke: rgba(214, 181, 109, .18);
+}
+
+.resource-donut text {
+  fill: rgba(245, 239, 223, .72);
+  font-size: 10px;
+}
+
+.resource-donut .donut-label {
+  fill: rgba(245, 239, 223, .52);
+  font: 8px "JetBrains Mono", monospace;
+  letter-spacing: 2px;
+}
+
+.resource-donut .donut-score {
+  fill: #d6b56d;
+  font: 12px "Cormorant Garamond", serif;
+}
+
 .axis-card {
   min-height: 64mm;
   padding: 8mm 7mm;
@@ -733,7 +810,7 @@ p {
   height: .55mm;
   border-radius: 99px;
   margin-top: 16mm;
-  background: linear-gradient(90deg, rgba(214, 181, 109, .82), rgba(214, 181, 109, .48), rgba(122, 92, 255, .85));
+  background: linear-gradient(90deg, #b58a3e, #d6b56d 42%, #8150b8 72%, #a75bdc);
 }
 
 .axis-line:before,
@@ -761,11 +838,16 @@ p {
   position: absolute;
   left: var(--pos);
   top: 50%;
-  width: 5.5mm;
-  height: 5.5mm;
-  border: 1.2px solid #f0c85d;
+  width: 10mm;
+  height: 10mm;
+  border: 0;
   border-radius: 50%;
-  background: transparent;
+  background: radial-gradient(circle,
+    #090a1f 0 29%,
+    #f0c85d 31% 37%,
+    rgba(242, 185, 64, .55) 43%,
+    rgba(226, 154, 37, .20) 60%,
+    rgba(226, 154, 37, 0) 76%);
   transform: translate(-50%, -50%);
   z-index: 2;
 }
@@ -818,16 +900,28 @@ p {
   width: var(--fill);
   height: 100%;
   border-radius: 3mm;
-  background: linear-gradient(90deg, rgba(122, 92, 255, .72), rgba(214, 181, 109, .86));
+  background: linear-gradient(90deg, #f0ce76, #c49bc2 52%, #9c52cf);
+  opacity: var(--fill-opacity);
 }
 
-.battery b {
+.battery .battery-value {
   position: absolute;
-  left: 50%;
-  top: 50%;
-  color: #171225;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-weight: 400;
   font-size: 18px;
-  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.battery-value-light {
+  color: #f5efdf;
+}
+
+.battery-value-dark {
+  color: #101126;
+  clip-path: inset(0 calc(100% - var(--fill)) 0 0);
 }
 
 .bar-list {
@@ -892,6 +986,8 @@ p {
 
 .core b {
   position: absolute;
+  left: 50%;
+  top: 50%;
   width: 11mm;
   height: 11mm;
   display: grid;
@@ -899,8 +995,9 @@ p {
   border-radius: 50%;
   background: radial-gradient(circle, #ead37d 0%, #c9ad77 42%, rgba(122, 92, 255, .88) 100%);
   color: #171225;
-  font-family: Georgia, serif;
+  font-family: "Cormorant Garamond", Georgia, serif;
   font-size: 15px;
+  transform: translate(-50%, -50%);
 }
 
 .core-words {
@@ -934,16 +1031,41 @@ p {
 }
 
 .intimacy-pulse {
-  width: 60mm;
-  margin: 6mm auto 0;
-  display: block;
-  overflow: visible;
+  position: relative;
+  min-height: 42mm;
+  margin: 7mm auto 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.intimacy-pulse text {
-  fill: #d6b56d;
-  font-family: Georgia, "Times New Roman", serif;
-  font-size: 14px;
+.intimacy-pulse i {
+  width: 32mm;
+  height: 32mm;
+  border-radius: 50%;
+}
+
+.intimacy-pulse i:first-child {
+  margin-right: calc(var(--pulse-overlap) * -1);
+  border: 1.5px solid #d6b56d;
+  background: rgba(190, 145, 61, .76);
+  box-shadow: 0 0 0 3mm rgba(214, 181, 109, .08);
+}
+
+.intimacy-pulse i:nth-child(2) {
+  margin-left: calc(var(--pulse-overlap) * -1);
+  border: 1.5px solid #a75bdc;
+  background: rgba(112, 58, 155, .82);
+  box-shadow: 0 0 0 3mm rgba(122, 92, 255, .08);
+}
+
+.intimacy-pulse b {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  color: #d6b56d;
+  font: 14px "Cormorant Garamond", Georgia, serif;
+  transform: translateX(-50%);
 }
 
 .risk-grid,
@@ -961,36 +1083,74 @@ p {
 }
 
 .risk-card {
-  background: linear-gradient(90deg, rgba(122, 92, 255, .28), rgba(255, 255, 255, .035) var(--level));
+  background:
+    radial-gradient(circle at 10% 50%, rgba(78, 55, 132, .13), transparent 45%),
+    rgba(16, 16, 43, .68);
 }
 
-.risk-card b,
 .op-card h3 {
   color: #d6b56d;
 }
 
+.risk-card small,
+.op-card small {
+  display: block;
+  margin-bottom: 4mm;
+  font-size: 8.5px;
+  font-weight: 800;
+  letter-spacing: 2.8px;
+  text-transform: uppercase;
+}
+
+.risk-card small {
+  color: #a63745;
+}
+
+.op-card small {
+  color: #d6b56d;
+}
+
+.risk-card h3 {
+  font-size: 22px;
+}
+
 .plan-list {
+  margin-top: 12mm;
+  border: 1px solid rgba(214, 181, 109, .17);
+  border-radius: 7mm;
+  overflow: hidden;
+}
+
+.plan-list header,
+.plan-step {
   display: grid;
-  gap: 3mm;
-  margin-top: 7mm;
+  grid-template-columns: 42mm 1fr;
+  gap: 6mm;
+  align-items: center;
+}
+
+.plan-list header {
+  padding: 4mm 6mm;
+  border-bottom: 1px solid rgba(214, 181, 109, .12);
+  color: rgba(245, 239, 223, .48);
+  font-size: 8px;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
 }
 
 .plan-step {
-  display: grid;
-  grid-template-columns: 12mm 1fr;
-  gap: 4mm;
-  align-items: center;
-  padding: 4mm 5mm;
+  padding: 5mm 6mm;
+  border: 0;
+  border-bottom: 1px solid rgba(214, 181, 109, .10);
+  border-radius: 0;
+  background: transparent;
 }
 
 .plan-step b {
-  width: 10mm;
-  height: 10mm;
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
-  background: #d6b56d;
-  color: #171225;
+  color: #d6b56d;
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-size: 13px;
+  font-weight: 400;
 }
 
 .plan-step span {
@@ -1057,7 +1217,7 @@ p {
   position: relative;
   z-index: 1;
   color: #f5efdf;
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: "Cormorant Garamond", Georgia, serif;
   font-size: 28px;
   font-weight: 400;
   line-height: 1;
@@ -1066,4 +1226,1885 @@ p {
 .heatmap-card strong span {
   color: rgba(245, 239, 223, .46);
   font-size: 15px;
+}
+
+/* Continuous report layout from the approved solar reference video. */
+body {
+  background:
+    radial-gradient(circle at 52% 4%, rgba(72, 49, 130, .32), transparent 28%),
+    radial-gradient(1px 1px at 10% 18%, rgba(214, 181, 109, .52), transparent 2px),
+    radial-gradient(1px 1px at 81% 34%, rgba(245, 239, 223, .42), transparent 2px),
+    radial-gradient(1px 1px at 22% 67%, rgba(214, 181, 109, .36), transparent 2px),
+    radial-gradient(1px 1px at 74% 84%, rgba(245, 239, 223, .32), transparent 2px),
+    #050619;
+  background-size: auto, 430px 430px, 560px 560px, 610px 610px, 720px 720px, auto;
+}
+
+.page {
+  width: 100%;
+  height: auto;
+  min-height: 0;
+  padding: 58px max(32px, calc((100% - 1268px) / 2));
+  overflow: visible;
+  page-break-after: auto;
+  background: transparent;
+}
+
+.page::before {
+  content: none;
+}
+
+.cover-page {
+  min-height: 720px;
+  grid-template-columns: 1fr;
+  align-content: center;
+  padding-top: 90px;
+  padding-bottom: 90px;
+}
+
+.cover-copy {
+  max-width: 1000px;
+}
+
+.cover-art {
+  display: none;
+}
+
+.wheel-page {
+  padding-top: 68px;
+  padding-bottom: 86px;
+}
+
+.wheel-layout {
+  grid-template-columns: minmax(0, 1fr) 610px;
+  gap: 54px;
+}
+
+.radar-card {
+  width: 100%;
+  min-height: 440px;
+}
+
+.radar-svg {
+  width: 390px;
+  height: 390px;
+}
+
+.map-analysis {
+  margin-top: 58px;
+}
+
+.theme-page,
+.summary-page,
+.heatmap-page {
+  padding-top: 76px;
+  padding-bottom: 86px;
+}
+
+.theme-card {
+  margin-top: 54px;
+}
+
+.category-page {
+  padding-top: 22px;
+  padding-bottom: 22px;
+}
+
+.category-shell {
+  width: 100%;
+  height: auto;
+  min-height: 0;
+  padding: 52px 54px;
+}
+
+.category-layout {
+  grid-template-columns: minmax(0, 1.35fr) minmax(360px, .65fr);
+  gap: 54px;
+}
+
+.visual-card {
+  width: 100%;
+}
+
+.risk-grid,
+.opportunity-grid {
+  gap: 24px;
+}
+
+.heatmap-grid {
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+.pulse-guide-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 22px;
+}
+
+.pulse-guide-card {
+  padding: 26px;
+  border: 1px solid rgba(214, 181, 109, .20);
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at 50% 45%, rgba(103, 61, 157, .18), transparent 42%),
+    rgba(16, 16, 43, .72);
+}
+
+.pulse-pair {
+  min-height: 250px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pulse-pair i {
+  width: var(--pulse-size);
+  height: var(--pulse-size);
+  border-radius: 50%;
+  opacity: var(--pulse-opacity);
+}
+
+.pulse-pair i:first-child {
+  margin-right: calc(var(--pulse-overlap) * -1);
+  border: 2px solid #d6a845;
+  background: #d6a845;
+}
+
+.pulse-pair i:last-child {
+  margin-left: calc(var(--pulse-overlap) * -1);
+  border: 2px solid #9f4bd2;
+  background: #7d3fa5;
+}
+
+.pulse-guide-card > strong,
+.pulse-guide-card > small {
+  display: block;
+  text-align: center;
+}
+
+.pulse-guide-card > strong {
+  margin-top: -12px;
+  color: #d6b56d;
+  font: 27px "Cormorant Garamond", Georgia, serif;
+}
+
+.pulse-guide-card > small {
+  margin-top: 24px;
+  color: rgba(245, 239, 223, .42);
+  font-size: 13px;
+}
+
+.pulse-guide-card footer {
+  margin-top: 25px;
+  padding-top: 22px;
+  border-top: 1px solid rgba(214, 181, 109, .14);
+  text-align: center;
+}
+
+.pulse-guide-card footer b {
+  color: #d6b56d;
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.pulse-guide-card footer p {
+  margin-top: 8px;
+  color: rgba(245, 239, 223, .55);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+@media screen {
+  .kicker,
+  .eyebrow,
+  .section-head,
+  .block-title {
+    font-size: 13px;
+    letter-spacing: 4px;
+  }
+
+  .cover-copy h1 {
+    font-size: 76px;
+  }
+
+  .cover-copy p {
+    max-width: 920px;
+    font-size: 25px;
+  }
+
+  .cover-meta dt {
+    font-size: 13px;
+    letter-spacing: 4px;
+  }
+
+  .cover-meta dd {
+    font: 22px "Cormorant Garamond", Georgia, serif;
+  }
+
+  .wheel-page h2,
+  .theme-page h2,
+  .summary-page h2 {
+    font-size: 58px;
+  }
+
+  .lead {
+    font-size: 20px;
+  }
+
+  .score-row {
+    padding: 13px 0;
+  }
+
+  .score-row span {
+    font-size: 17px;
+  }
+
+  .score-row small {
+    font-size: 12px;
+  }
+
+  .score-row b {
+    font: 22px "Cormorant Garamond", Georgia, serif;
+  }
+
+  .map-analysis span {
+    font-size: 13px;
+  }
+
+  .map-analysis p,
+  .theme-card p {
+    font-size: 19px;
+  }
+
+  .theme-pills span {
+    padding: 8px 18px;
+    font-size: 14px;
+  }
+
+  .accent-grid b,
+  .op-card h3,
+  .risk-card h3 {
+    font-size: 23px;
+  }
+
+  .risk-card small,
+  .op-card small {
+    font-size: 13px;
+  }
+
+  .accent-grid span,
+  .op-card p,
+  .risk-card span,
+  .risk-card em {
+    font-size: 16px;
+  }
+
+  .category-header h2 {
+    font-size: 46px;
+  }
+
+  .category-header p {
+    font-size: 20px;
+  }
+
+  .score-badge {
+    height: 58px;
+  }
+
+  .score-badge b,
+  .score-badge em {
+    font-size: 25px;
+  }
+
+  .category-columns {
+    gap: 26px 46px;
+  }
+
+  .category-columns ul {
+    padding-left: 17px;
+    font-size: 17px;
+    line-height: 1.48;
+  }
+
+  .category-meaning p {
+    max-width: 700px;
+    font-size: 20px;
+  }
+
+  .category-actions ul {
+    font-size: 17px;
+    gap: 10px 44px;
+  }
+
+  .category-columns li {
+    margin-bottom: 9px;
+  }
+
+  .astro-basis p {
+    font-size: 15px;
+    line-height: 1.5;
+  }
+
+  .category-focus p {
+    font-size: 16px;
+  }
+
+  .visual-card {
+    min-height: 365px;
+    padding: 32px;
+    border-radius: 28px;
+  }
+
+  .visual-title {
+    font-size: 13px;
+    letter-spacing: 4px;
+  }
+
+  .ladder {
+    height: 245px;
+    gap: 8px;
+  }
+
+  .ring-wrap {
+    width: 230px;
+    height: 230px;
+  }
+
+  .ring-center {
+    inset: 70px;
+  }
+
+  .foundation-shape {
+    width: 310px;
+  }
+
+  .battery {
+    height: 124px;
+  }
+
+  .bar-row,
+  .bar-row b {
+    font-size: 15px;
+  }
+
+  .core {
+    height: 270px;
+  }
+
+  .core svg {
+    width: 250px;
+    height: 250px;
+  }
+
+  .intimacy-pulse {
+    width: 100%;
+    min-height: 260px;
+  }
+
+  .intimacy-pulse i {
+    width: 140px;
+    height: 140px;
+  }
+
+  .intimacy-pulse b {
+    font-size: 22px;
+  }
+
+  .risk-card,
+  .op-card {
+    min-height: 170px;
+    padding: 30px;
+  }
+
+  .plan-list header,
+  .plan-step {
+    grid-template-columns: 235px 1fr;
+  }
+
+  .plan-list header {
+    padding: 22px 30px;
+    font-size: 13px;
+  }
+
+  .plan-step {
+    padding: 27px 30px;
+  }
+
+  .plan-step b {
+    width: auto;
+    height: auto;
+    display: block;
+    border-radius: 0;
+    background: transparent;
+    color: #d6b56d;
+    font: 22px "Cormorant Garamond", Georgia, serif;
+  }
+
+  .plan-step span {
+    font-size: 19px;
+  }
+
+  .heatmap-lead {
+    font-size: 21px;
+  }
+
+  .heatmap-card h3 {
+    font-size: 13px;
+  }
+}
+
+@media screen and (max-width: 980px) {
+  .wheel-layout,
+  .category-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .radar-card,
+  .visual-card {
+    justify-self: stretch;
+  }
+
+  .heatmap-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .pulse-guide-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media print {
+  body {
+    background: #050619;
+  }
+
+  .page {
+    width: 210mm;
+    height: 297mm;
+    min-height: 297mm;
+    padding: 16mm 17mm;
+    overflow: hidden;
+    break-after: page;
+    page-break-after: always;
+  }
+
+  .page:last-child {
+    break-after: auto;
+    page-break-after: auto;
+  }
+
+  .cover-page {
+    min-height: 265mm;
+  }
+
+  .wheel-layout {
+    grid-template-columns: 80mm 1fr;
+    gap: 8mm;
+  }
+
+  .radar-card {
+    min-height: 88mm;
+  }
+
+  .radar-svg {
+    width: 72mm;
+    height: 72mm;
+  }
+
+  .category-page {
+    width: 210mm;
+    height: 297mm;
+    min-height: 297mm;
+    padding: 12mm;
+    display: flex;
+    align-items: center;
+    break-inside: avoid;
+    break-after: page;
+  }
+
+  .category-shell {
+    width: 100%;
+    height: auto;
+    min-height: 0;
+    padding: 10mm;
+    break-inside: avoid;
+  }
+
+  .category-layout {
+    grid-template-columns: 1.25fr .75fr;
+    gap: 8mm;
+  }
+
+  .theme-card,
+  .map-analysis,
+  .visual-card,
+  .risk-card,
+  .op-card,
+  .plan-step,
+  .heatmap-card {
+    break-inside: avoid;
+  }
+
+  .heatmap-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .pulse-guide-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 5mm;
+  }
+
+  .pulse-guide-card {
+    padding: 5mm;
+    break-inside: avoid;
+  }
+
+  .pulse-pair {
+    min-height: 48mm;
+  }
+
+  .pulse-guide-card footer {
+    margin-top: 4mm;
+    padding-top: 3mm;
+  }
+}
+
+/* Approved A4 cover. Keep this block last so report-wide screen/print rules cannot shift it. */
+.cover-page {
+  position: relative;
+  width: 210mm;
+  height: 297mm;
+  min-height: 297mm;
+  margin: 0 auto;
+  display: block;
+  overflow: hidden;
+  padding: 0;
+  border: .25mm solid rgba(239, 239, 232, .88);
+  border-radius: 7.7mm 7.7mm 0 0;
+  background:
+    radial-gradient(ellipse 111mm 164mm at 42% 16%, rgba(45, 29, 94, .58) 0%, rgba(26, 18, 62, .35) 47%, transparent 78%),
+    radial-gradient(ellipse 103mm 114mm at 76% 54%, rgba(19, 13, 52, .30), transparent 76%),
+    linear-gradient(180deg, #070819 0%, #030415 62%, #020313 100%);
+}
+
+.cover-page::before,
+.cover-page::after {
+  content: none;
+}
+
+.cover-content {
+  position: absolute;
+  z-index: 2;
+  inset: 34.9mm 10mm auto;
+}
+
+.cover-kicker {
+  display: flex;
+  align-items: center;
+  gap: 4.8mm;
+  color: #aaa69c;
+  font-size: 14px;
+  font-weight: 400;
+  letter-spacing: 5px;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.cover-kicker::before {
+  content: "";
+  width: 12.2mm;
+  height: .4mm;
+  flex: 0 0 12.2mm;
+  background: #c9952c;
+}
+
+.cover-content h1 {
+  margin: 13.2mm 0 0;
+  color: #efb238;
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-size: 88px;
+  font-weight: 400;
+  letter-spacing: -2px;
+  line-height: .92;
+}
+
+.cover-content > p {
+  margin: 12.2mm 0 0;
+  max-width: none;
+  color: #aaa69f;
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-size: 31px;
+  font-style: italic;
+  line-height: 1.12;
+}
+
+.cover-meta {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 9.3mm;
+  row-gap: 13.5mm;
+  margin: 22mm 0 0;
+  padding-top: 20.6mm;
+  border-top: .25mm solid rgba(195, 151, 64, .34);
+}
+
+.cover-meta div {
+  border: 0;
+  padding: 0;
+}
+
+.cover-meta dt {
+  color: #827f7c;
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 4px;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.cover-meta dd {
+  margin: 4.8mm 0 0;
+  color: #ece7dc;
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-size: 23px;
+  font-weight: 400;
+  line-height: 1.22;
+}
+
+.cover-meta .cover-score {
+  display: flex;
+  align-items: baseline;
+  gap: 2.4mm;
+  color: #efad27;
+  font-size: 38px;
+  line-height: 1;
+}
+
+.cover-meta .cover-score span {
+  color: #77747b;
+  font-size: 33px;
+}
+
+.cover-star {
+  position: absolute;
+  z-index: 1;
+  width: .8mm;
+  height: .8mm;
+  border-radius: 50%;
+  background: rgba(211, 180, 105, .30);
+  box-shadow: 0 0 1.3mm rgba(211, 180, 105, .22);
+}
+
+.cover-star-1 { left: 34.9mm; top: 80.7mm; }
+.cover-star-2 { left: 125.1mm; top: 54.2mm; width: .5mm; height: .5mm; }
+.cover-star-3 { left: 97.6mm; top: 123mm; width: .5mm; height: .5mm; }
+.cover-star-4 { left: 70.6mm; top: 193.4mm; }
+.cover-star-5 { left: 152.1mm; top: 179.4mm; width: .5mm; height: .5mm; }
+.cover-star-6 { left: 161.1mm; top: 248.7mm; width: .5mm; height: .5mm; }
+.cover-star-7 { left: 25.4mm; top: 234.7mm; width: 1mm; height: 1mm; }
+.cover-star-8 { right: 3.7mm; top: 234.7mm; width: 1mm; height: 1mm; }
+
+/* Approved A4 page 2: map of the year + main theme. */
+.overview-page {
+  position: relative;
+  width: 210mm;
+  height: 297mm;
+  min-height: 297mm;
+  margin: 0 auto;
+  display: block;
+  overflow: hidden;
+  padding: 26mm 10mm 12mm;
+  background: radial-gradient(ellipse 116mm 155mm at 40% 13%, #06254e 0%, #091b3b 48%, #0b0b22 78%, #08081d 100%);
+}
+
+.overview-page::before,
+.overview-page::after {
+  content: none;
+}
+
+.overview-page .section-head {
+  margin: 0;
+  gap: 3mm;
+  color: #8f8b88;
+  font-size: 10px;
+  font-weight: 400;
+  letter-spacing: 3.5px;
+}
+
+.overview-page .section-head::before {
+  content: "";
+  width: 2mm;
+  height: .35mm;
+  background: #c9952c;
+}
+
+.overview-page .section-head::after {
+  height: .25mm;
+  background: linear-gradient(90deg, rgba(195, 151, 64, .34), rgba(195, 151, 64, .08));
+}
+
+.overview-page .section-head span {
+  color: #d3a33a;
+  font-size: 10px;
+}
+
+.overview-page .section-head b {
+  color: #8f8b88;
+  font-weight: 400;
+}
+
+.overview-page .wheel-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10mm;
+  align-items: start;
+  margin-top: 12mm;
+}
+
+.overview-page .wheel-layout h2 {
+  color: #eee9df;
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-size: 36px;
+  font-weight: 400;
+  line-height: 1;
+}
+
+.overview-page .lead {
+  margin-top: 5mm;
+  max-width: 84mm;
+  color: #9f9b95;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.overview-page .score-table {
+  margin-top: 8mm;
+}
+
+.overview-page .score-row {
+  grid-template-columns: 1fr auto;
+  gap: 3mm;
+  min-height: 9mm;
+  padding: 2.2mm 0;
+  border-bottom: .25mm solid rgba(214, 181, 109, .09);
+}
+
+.overview-page .score-row span {
+  color: #aaa69f;
+  font-size: 11px;
+}
+
+.overview-page .score-row b {
+  color: #eeb02f;
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-size: 15px;
+  font-weight: 400;
+  text-align: right;
+}
+
+.overview-page .score-row b small {
+  display: inline;
+  margin: 0 0 0 1mm;
+  color: #65616f;
+  font-size: 11px;
+}
+
+.overview-page .radar-card {
+  width: 90mm;
+  height: 118mm;
+  min-height: 0;
+  justify-self: end;
+  display: grid;
+  place-items: center;
+  padding: 7mm;
+  border: .25mm solid rgba(214, 181, 109, .20);
+  border-radius: 6mm;
+  background: rgba(18, 16, 41, .72);
+}
+
+.overview-page .radar-svg {
+  width: 78mm;
+  height: 78mm;
+}
+
+.overview-page .radar-grid polygon,
+.overview-page .radar-grid line {
+  stroke: rgba(214, 181, 109, .15);
+}
+
+.overview-page .radar-area {
+  fill: rgba(205, 168, 78, .12);
+}
+
+.overview-page .radar-line {
+  stroke: #e7ac2d;
+  stroke-width: 1.4;
+}
+
+.overview-page .radar-dots circle {
+  fill: #f0c358;
+  stroke: none;
+}
+
+.overview-page .radar-label-title {
+  fill: #e9e4dc;
+  font-size: 9px;
+  font-weight: 400;
+}
+
+.overview-page .radar-label-score {
+  fill: #e4aa2f;
+  font-size: 7px;
+  font-weight: 400;
+}
+
+.overview-theme-head {
+  margin-top: 22mm !important;
+}
+
+.overview-theme-card {
+  min-height: 80mm;
+  margin-top: 11mm;
+  padding: 13mm;
+  border: .25mm solid rgba(214, 181, 109, .21);
+  border-radius: 6mm;
+  background:
+    radial-gradient(ellipse 80mm 50mm at 20% 0%, rgba(34, 49, 104, .15), transparent 72%),
+    rgba(16, 16, 39, .84);
+}
+
+.overview-theme-card .eyebrow {
+  color: #d2a33a;
+  font-size: 10px;
+  font-weight: 400;
+  letter-spacing: 4px;
+}
+
+.overview-theme-card h2 {
+  max-width: 170mm;
+  margin-top: 8mm;
+  color: #eee9df;
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-size: 30px;
+  font-weight: 400;
+  line-height: 1.3;
+}
+
+.overview-theme-card h2 em,
+.overview-theme-card h2 strong {
+  color: #e7ac2d;
+  font-style: normal;
+  font-weight: 400;
+}
+
+.overview-theme-card p {
+  max-width: 174mm;
+  margin-top: 7mm;
+  color: #aaa69f;
+  font-size: 14px;
+  line-height: 1.52;
+}
+
+/* Approved A4 category composition: fixed header, elastic content, fixed basis. */
+.category-page {
+  display: block !important;
+  width: 210mm;
+  height: 297mm;
+  min-height: 297mm;
+  padding: 9mm 10mm 8mm !important;
+  overflow: hidden;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+  background: radial-gradient(ellipse 116mm 155mm at 40% 13%, #06254e 0%, #091b3b 48%, #0b0b22 78%, #08081d 100%);
+}
+
+.category-page::before {
+  content: none;
+}
+
+.category-page > .category-section-head {
+  height: 6mm;
+  margin: 0 0 8mm;
+}
+
+.category-page > .category-section-head::after {
+  background: #6d5537;
+}
+
+.category-shell {
+  box-sizing: border-box;
+  width: 100%;
+  height: 260mm !important;
+  min-height: 260mm !important;
+  padding: 10mm 9mm 9mm !important;
+  display: flex;
+  flex-direction: column;
+  border: .25mm solid rgba(214, 181, 109, .22);
+  border-radius: 6mm;
+  background: radial-gradient(ellipse 116mm 155mm at 40% 13%, #06254e 0%, #091b3b 48%, #0b0b22 78%, #08081d 100%);
+}
+
+.category-header {
+  flex: 0 0 auto;
+  grid-template-columns: 1fr 28mm;
+  gap: 8mm;
+  align-items: start;
+}
+
+.category-header h2 {
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-size: 29px;
+  font-weight: 400;
+  line-height: 1.05;
+}
+
+.category-header p {
+  max-width: 142mm;
+  margin-top: 3mm;
+  font-size: 12px;
+  line-height: 1.42;
+}
+
+.score-badge {
+  height: 12mm;
+}
+
+.score-badge b,
+.score-badge em {
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-size: 18px;
+  font-weight: 400;
+}
+
+.category-divider {
+  flex: 0 0 auto;
+  height: .35mm;
+  margin: 7mm 0 8mm;
+  background: #6d5537;
+}
+
+.category-layout {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1.22fr) minmax(0, .78fr) !important;
+  gap: 9mm !important;
+  align-items: stretch;
+}
+
+.category-copy {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.category-meaning {
+  margin: 0;
+}
+
+.category-meaning p {
+  max-width: none;
+  font-size: 11.4px;
+  line-height: 1.5;
+}
+
+.category-columns {
+  gap: 8mm;
+}
+
+.category-columns ul {
+  padding-left: 3.8mm;
+  font-size: 9.4px;
+  line-height: 1.38;
+}
+
+.category-columns li {
+  margin-bottom: 2mm;
+}
+
+.category-actions {
+  margin-top: 0;
+}
+
+.category-actions ul {
+  gap: 2.6mm 8mm;
+  font-size: 9.4px;
+  line-height: 1.38;
+}
+
+.astro-basis {
+  margin-top: 0;
+  padding-top: 0;
+}
+
+.astro-basis p {
+  max-width: 112mm;
+  margin-top: 2mm;
+  font-size: 8.7px;
+  line-height: 1.45;
+}
+
+.category-layout > .visual-card {
+  align-self: center;
+  min-height: 82mm;
+  padding: 8mm 6mm 6mm;
+  border-radius: 6mm;
+  background: rgba(13, 14, 38, .66);
+}
+
+.category-layout > .visual-card .ladder-score {
+  display: none;
+}
+
+.category-layout > .visual-card .ladder {
+  height: 47mm;
+  gap: 1.7mm;
+  margin-top: 8mm;
+}
+
+.category-layout > .visual-card .ladder span.active {
+  background: linear-gradient(90deg, #e8bf64, #d78f20 72%, #bd680e);
+}
+
+.category-layout > .visual-card .visual-caption {
+  margin-top: 4mm;
+}
+
+/* Career ladder: ten real levels, filled strictly by the category score. */
+.category-layout > .career-ladder-card {
+  min-height: 88mm;
+  padding: 8mm 6mm 4mm;
+}
+
+.category-layout > .career-ladder-card .ladder {
+  height: 43mm;
+  margin-top: 6mm;
+  display: grid;
+  grid-template-rows: repeat(10, 1fr);
+  gap: 1.15mm;
+}
+
+.career-ladder-card .ladder-row {
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 5mm 1fr;
+  gap: 2mm;
+  align-items: center;
+}
+
+.career-ladder-card .ladder-row i {
+  color: rgba(245, 239, 223, .28);
+  font-family: "JetBrains Mono", DejaVu Sans Mono, monospace;
+  font-size: 7px;
+  font-style: normal;
+  line-height: 1;
+  text-align: right;
+}
+
+.career-ladder-card .ladder-row span {
+  width: 100%;
+  height: 1.1mm;
+  min-height: 1.1mm;
+  border: 0;
+  border-radius: 99px;
+  background: #24243d;
+  opacity: .28;
+}
+
+.career-ladder-card .ladder-row.active i {
+  color: rgba(225, 174, 54, .82);
+}
+
+.career-ladder-card .ladder-row.active span {
+  opacity: 1;
+}
+
+.career-ladder-card .visual-caption {
+  padding-top: 3mm;
+  border-top: .2mm solid rgba(214, 181, 109, .14);
+}
+
+.career-ladder-card .visual-caption span:last-child {
+  color: #dca72e;
+}
+
+.ladder-insight {
+  margin-top: 5mm;
+  text-align: center;
+}
+
+.ladder-insight b {
+  color: #d6a838;
+  font-size: 10px;
+  font-weight: 500;
+}
+
+.ladder-insight p {
+  margin-top: 2mm;
+  color: rgba(245, 239, 223, .50);
+  font-size: 8.2px;
+  line-height: 1.4;
+}
+
+/* Money resource map: four independently scaled supports. */
+.category-layout > .resource-card {
+  min-height: 111mm;
+  padding: 8mm 5mm 6mm;
+}
+
+.resource-card .resource-donut {
+  width: 100%;
+  max-width: 64mm;
+  margin-top: 5mm;
+}
+
+.resource-card .resource-donut .resource-limit {
+  fill: none;
+  stroke: rgba(214, 181, 109, .22);
+  stroke-width: 1;
+  stroke-dasharray: 3 6;
+}
+
+.resource-card .resource-donut path {
+  stroke: #08091e;
+  stroke-width: 2.4;
+}
+
+.resource-card .resource-donut .sector-value {
+  fill: rgba(245, 239, 223, .88);
+  font-size: 10px;
+}
+
+.resource-card .resource-donut .donut-hole {
+  fill: #08091e;
+  stroke: rgba(214, 181, 109, .18);
+  stroke-width: 1.2;
+}
+
+.resource-card .resource-rule {
+  margin: 2mm 0 0;
+  color: rgba(245, 239, 223, .40);
+  font-size: 7.7px;
+  line-height: 1.4;
+  text-align: center;
+}
+
+.resource-insight {
+  margin-top: 5mm;
+  text-align: center;
+}
+
+.resource-insight b {
+  color: #d6a838;
+  font-size: 10px;
+  font-weight: 500;
+}
+
+.resource-insight p {
+  margin-top: 2mm;
+  color: rgba(245, 239, 223, .50);
+  font-size: 8.2px;
+  line-height: 1.4;
+}
+
+/* Home: four independently filled levels derived from the category score. */
+.category-layout > .foundation-card {
+  min-height: 119mm;
+  padding: 8mm 5mm 6mm;
+}
+
+.foundation-card .foundation-shape {
+  display: block;
+  width: 100%;
+  max-width: 78mm;
+  margin: 3mm auto 0;
+  overflow: visible;
+}
+
+.foundation-roof {
+  fill: #403634;
+  stroke: #d19a31;
+  stroke-width: 1.4;
+}
+
+.foundation-track {
+  fill: #111229;
+  stroke: #725a3b;
+  stroke-width: 1.25;
+}
+
+.foundation-fill {
+  fill: #7640a3;
+}
+
+.foundation-label {
+  fill: #eee9df;
+  font-family: "Manrope", Arial, sans-serif;
+  font-size: 10.5px;
+}
+
+.foundation-state {
+  fill: #e7ac2d;
+  font-family: "Manrope", Arial, sans-serif;
+  font-size: 10px;
+}
+
+.foundation-rule {
+  margin: 0 1mm;
+  color: rgba(245, 239, 223, .46);
+  font-size: 8px;
+  line-height: 1.45;
+}
+
+.foundation-insight {
+  margin-top: 5mm;
+  text-align: center;
+}
+
+.foundation-insight b {
+  color: #d6a838;
+  font-size: 10px;
+  font-weight: 500;
+}
+
+.foundation-insight p {
+  margin-top: 2mm;
+  color: rgba(245, 239, 223, .52);
+  font-size: 8.1px;
+  line-height: 1.42;
+}
+
+/* Communication: compact reference-like card with luminous gold bars. */
+.category-layout > .communication-card {
+  min-height: 78mm;
+  padding: 7mm 6mm 4.5mm;
+}
+
+.communication-card .bar-list {
+  gap: 4.2mm;
+  margin-top: 7mm;
+}
+
+.communication-card .bar-row div {
+  margin-bottom: 1.8mm;
+}
+
+.communication-card .bar-row b {
+  color: rgba(245, 239, 223, .82);
+  font-size: 10.2px;
+  font-weight: 500;
+}
+
+.communication-card .bar-row em {
+  color: #efb52f;
+  font-size: 9.2px;
+  font-weight: 600;
+}
+
+.communication-card .bar-row > span {
+  height: 1.45mm;
+  background: #17182f;
+}
+
+.communication-card .bar-row i {
+  background: linear-gradient(90deg, #f3d477 0%, #e9ab2b 58%, #c8780e 100%);
+}
+
+.communication-rule {
+  margin-top: 5mm;
+  color: rgba(245, 239, 223, .42);
+  font-size: 8px;
+  line-height: 1.45;
+}
+
+/* Intimacy pulse: energy controls circle size and overlap; labels stay opaque. */
+.category-layout > .intimacy-card {
+  min-height: 86mm;
+  padding: 7mm 6mm 5mm;
+  justify-content: flex-start;
+}
+
+.intimacy-card .intimacy-pulse {
+  min-height: 35mm;
+  margin: 1.7mm auto 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.intimacy-graphic {
+  display: block;
+  width: 100%;
+  height: 35mm;
+  overflow: visible;
+}
+
+.intimacy-halo {
+  fill: none;
+  stroke-width: 10;
+  opacity: .28;
+  filter: url(#intimacy-halo);
+}
+
+.intimacy-halo-gold {
+  stroke: #b58a43;
+}
+
+.intimacy-halo-violet {
+  stroke: #66358d;
+}
+
+.intimacy-circle {
+  stroke-width: 2.2;
+}
+
+.intimacy-circle-gold {
+  fill: #98733d;
+  fill-opacity: .86;
+  stroke: #d2a33f;
+}
+
+.intimacy-circle-violet {
+  fill: #57317a;
+  fill-opacity: .9;
+  stroke: #8746aa;
+}
+
+.intimacy-connector {
+  fill: none;
+  stroke: #b36bb8;
+  stroke-width: 3.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.intimacy-keywords {
+  margin-top: .7mm;
+  color: rgba(245, 239, 223, .48);
+}
+
+.intimacy-insight {
+  margin-top: 4mm;
+  text-align: center;
+}
+
+.intimacy-insight b {
+  color: #d6a838;
+  font-size: 10px;
+  font-weight: 500;
+}
+
+.intimacy-insight p {
+  margin-top: 2mm;
+  color: rgba(245, 239, 223, .52);
+  font-size: 8.2px;
+  line-height: 1.45;
+}
+
+/* The sex page follows the same 8 mm vertical rhythm as divider-to-content. */
+.category-sex .category-copy {
+  justify-content: flex-start;
+}
+
+.category-sex .category-meaning,
+.category-sex .category-columns,
+.category-sex .category-actions {
+  margin-bottom: 8mm;
+}
+
+.category-sex .astro-basis {
+  margin-top: 0;
+}
+
+.category-sex .astro-basis p {
+  font-size: 7.8px;
+  line-height: 1.3;
+}
+
+/* A4 page 11: risk and opportunity summaries share one reference-like page. */
+.summary-combined-page {
+  width: 210mm;
+  height: 297mm;
+  min-height: 297mm;
+  padding: 10mm !important;
+  overflow: hidden;
+  background: radial-gradient(ellipse 116mm 155mm at 40% 13%, #06254e 0%, #091b3b 48%, #0b0b22 78%, #08081d 100%);
+}
+
+.summary-combined-page .summary-block + .summary-block {
+  margin-top: 15mm;
+}
+
+.summary-combined-page .section-head {
+  height: 6mm;
+  margin: 0;
+}
+
+.summary-combined-page .section-head::after {
+  background: #6d5537;
+}
+
+.summary-combined-page .risk-grid,
+.summary-combined-page .opportunity-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4mm;
+  margin-top: 8mm;
+}
+
+.summary-combined-page .risk-card,
+.summary-combined-page .op-card {
+  box-sizing: border-box;
+  min-height: 34mm;
+  padding: 5mm;
+  border: .25mm solid rgba(214, 181, 109, .20);
+  border-radius: 5mm;
+  background: rgba(10, 11, 32, .66);
+}
+
+.summary-combined-page .risk-card small,
+.summary-combined-page .op-card small {
+  margin-bottom: 2.5mm;
+  font-size: 7.5px;
+  letter-spacing: 2.5px;
+}
+
+.summary-combined-page .risk-card small {
+  color: #bd3347;
+}
+
+.summary-combined-page .op-card small {
+  color: #c99a36;
+}
+
+.summary-combined-page .risk-card h3,
+.summary-combined-page .op-card h3 {
+  margin: 0;
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-size: 18px;
+  font-weight: 400;
+  line-height: 1.05;
+}
+
+.summary-combined-page .risk-card h3 {
+  color: #f5efdf;
+}
+
+.summary-combined-page .op-card h3 {
+  color: #d8aa49;
+}
+
+.summary-combined-page .risk-card span,
+.summary-combined-page .op-card p {
+  display: block;
+  margin-top: 3mm;
+  color: rgba(245, 239, 223, .64);
+  font-size: 9.2px;
+  line-height: 1.38;
+}
+
+/* A4 page 12: practical plan and heatmap on one page. */
+.plan-heatmap-page {
+  position: relative;
+  width: 210mm;
+  height: 297mm;
+  min-height: 297mm;
+  padding: 10mm !important;
+  overflow: hidden;
+  background: radial-gradient(ellipse 116mm 155mm at 40% 13%, #06254e 0%, #091b3b 48%, #0b0b22 78%, #08081d 100%);
+}
+
+.plan-heatmap-page::after {
+  content: "";
+  position: absolute;
+  left: 10mm;
+  right: 10mm;
+  bottom: 8mm;
+  height: .25mm;
+  background: #6d5537;
+}
+
+.plan-heatmap-page .section-head {
+  height: 6mm;
+  margin: 0;
+}
+
+.plan-heatmap-page .section-head::after {
+  background: #6d5537;
+}
+
+.plan-heatmap-page .plan-list {
+  margin-top: 8mm;
+  border: .25mm solid rgba(214, 181, 109, .20);
+  border-radius: 5mm;
+}
+
+.plan-heatmap-page .plan-list header,
+.plan-heatmap-page .plan-step {
+  grid-template-columns: 38mm 1fr;
+  gap: 4mm;
+}
+
+.plan-heatmap-page .plan-list header {
+  min-height: 11mm;
+  padding: 3mm 4mm;
+  font-size: 7px;
+  letter-spacing: 2.4px;
+}
+
+.plan-heatmap-page .plan-step {
+  min-height: 13.5mm;
+  padding: 3mm 4mm;
+}
+
+.plan-heatmap-page .plan-step b {
+  font-size: 12.5px;
+}
+
+.plan-heatmap-page .plan-step span {
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+.plan-heatmap-page .heatmap-section {
+  margin-top: 15mm;
+}
+
+.plan-heatmap-page .heatmap-lead {
+  max-width: 148mm;
+  margin-top: 10mm;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.plan-heatmap-page .heatmap-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 3mm 2mm;
+  margin-top: 7mm;
+}
+
+.plan-heatmap-page .heatmap-card {
+  min-height: 24mm;
+  padding: 4mm;
+  border: .25mm solid rgba(214, 181, 109, .22);
+  border-radius: 4mm;
+}
+
+.plan-heatmap-page .heatmap-card h3 {
+  margin-bottom: 5mm;
+  font-size: 6.8px;
+  letter-spacing: 2.3px;
+  white-space: nowrap;
+}
+
+.plan-heatmap-page .heatmap-card strong {
+  font-size: 20px;
+}
+
+.plan-heatmap-page .heatmap-card strong span {
+  font-size: 10px;
+}
+
+/* The approved cover underlay is the single background reference for all pages. */
+.page {
+  background:
+    radial-gradient(ellipse 111mm 164mm at 42% 16%, rgba(45, 29, 94, .58) 0%, rgba(26, 18, 62, .35) 47%, transparent 78%),
+    radial-gradient(ellipse 103mm 114mm at 76% 54%, rgba(19, 13, 52, .30), transparent 76%),
+    linear-gradient(180deg, #070819 0%, #030415 62%, #020313 100%) !important;
+}
+
+.category-shell {
+  background: transparent !important;
+}
+
+/* Public web report controls. They never appear in the generated PDF. */
+.floating-pdf-button {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 10000;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  padding: 0 22px;
+  border: 1px solid rgba(248, 192, 72, .72);
+  border-radius: 999px;
+  color: #08091b;
+  background: linear-gradient(120deg, #f4d27e, #e99c17);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, .42), 0 0 24px rgba(237, 169, 37, .18);
+  font-family: "Manrope", Arial, sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.floating-pdf-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 15px 40px rgba(0, 0, 0, .48), 0 0 30px rgba(237, 169, 37, .24);
+}
+
+@media print {
+  .floating-pdf-button { display: none !important; }
+}
+
+/* Responsive reading layout. Print keeps the approved fixed A4 composition above. */
+@media screen and (max-width: 760px) {
+  html,
+  body {
+    width: 100% !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+    overflow-x: hidden;
+    background: #030415;
+  }
+
+  body {
+    padding: 0 0 92px !important;
+    color: #f4efe3;
+  }
+
+  .page {
+    box-sizing: border-box;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 28px 18px 38px !important;
+    overflow: visible !important;
+    page-break-after: auto !important;
+    break-after: auto !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+  }
+
+  .page + .page {
+    border-top: 1px solid rgba(214, 181, 109, .18) !important;
+  }
+
+  .cover-page {
+    display: flex !important;
+    align-items: center;
+    min-height: 100svh !important;
+    padding-top: max(36px, env(safe-area-inset-top)) !important;
+  }
+
+  .cover-content {
+    position: static !important;
+    width: 100% !important;
+    height: auto !important;
+    padding: 0 !important;
+  }
+
+  .cover-kicker {
+    margin-bottom: 38px !important;
+    font-size: 11px !important;
+    letter-spacing: 4px !important;
+  }
+
+  .cover-page h1 {
+    margin: 0 !important;
+    font-size: clamp(50px, 16vw, 72px) !important;
+    line-height: .94 !important;
+  }
+
+  .cover-page h1 + p {
+    margin-top: 24px !important;
+    font-size: 25px !important;
+    line-height: 1.16 !important;
+  }
+
+  .cover-meta {
+    position: static !important;
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 24px !important;
+    width: 100% !important;
+    margin-top: 48px !important;
+    padding-top: 28px !important;
+  }
+
+  .cover-meta dt { font-size: 10px !important; }
+  .cover-meta dd { margin-top: 8px !important; font-size: 20px !important; line-height: 1.3 !important; }
+  .cover-meta .cover-score { font-size: 34px !important; }
+
+  .section-head,
+  .category-section-head,
+  .overview-theme-head {
+    position: relative !important;
+    top: auto !important;
+    left: auto !important;
+    right: auto !important;
+    width: 100% !important;
+    height: auto !important;
+    margin: 0 0 28px !important;
+  }
+
+  .section-head b { font-size: 9px !important; letter-spacing: 3px !important; }
+
+  .wheel-layout,
+  .category-layout {
+    display: flex !important;
+    flex-direction: column !important;
+    grid-template-columns: none !important;
+    gap: 28px !important;
+  }
+
+  .wheel-layout h2,
+  .overview-theme-card h2,
+  .category-header h2 {
+    font-size: 39px !important;
+    line-height: 1.02 !important;
+  }
+
+  .lead,
+  .overview-theme-card p,
+  .category-header p,
+  .category-copy p,
+  .category-copy li,
+  .summary-page p,
+  .plan-step span,
+  .heatmap-lead {
+    font-size: 16px !important;
+    line-height: 1.6 !important;
+  }
+
+  .score-table { margin-top: 24px !important; }
+  .score-row { min-height: 48px !important; }
+  .score-row span { font-size: 14px !important; }
+  .score-row b { font-size: 18px !important; }
+
+  .radar-card,
+  .category-visual {
+    box-sizing: border-box;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    min-height: 320px !important;
+    margin: 0 !important;
+    padding: 18px !important;
+  }
+
+  .radar-svg { width: 100% !important; height: auto !important; }
+
+  .overview-theme-head { margin-top: 46px !important; }
+  .overview-theme-card {
+    width: auto !important;
+    height: auto !important;
+    min-height: 0 !important;
+    padding: 28px 22px !important;
+  }
+
+  .category-shell {
+    position: static !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 24px 0 0 !important;
+    border: 0 !important;
+  }
+
+  .category-header {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) auto !important;
+    gap: 12px !important;
+    align-items: start !important;
+  }
+
+  .score-badge {
+    position: static !important;
+    min-width: 74px !important;
+    padding: 9px 10px !important;
+  }
+
+  .category-divider { margin: 24px 0 28px !important; }
+  .category-copy { display: flex !important; flex-direction: column !important; gap: 28px !important; }
+  .category-columns { display: grid !important; grid-template-columns: 1fr !important; gap: 28px !important; }
+  .category-actions ul { grid-template-columns: 1fr !important; }
+  .block-title { margin-bottom: 12px !important; font-size: 10px !important; letter-spacing: 3px !important; }
+  .category-copy ul { gap: 10px !important; }
+  .astro-basis { position: static !important; margin-top: 4px !important; }
+
+  .visual-card,
+  .career-card,
+  .money-card,
+  .relationship-card,
+  .home-card,
+  .battery-card,
+  .communication-card,
+  .inner-card,
+  .intimacy-card {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-height: 300px !important;
+    margin: 0 !important;
+  }
+
+  .summary-combined-page {
+    display: block !important;
+  }
+
+  .summary-block,
+  .plan-section,
+  .heatmap-section {
+    position: static !important;
+    width: 100% !important;
+    height: auto !important;
+    margin: 0 0 48px !important;
+  }
+
+  .risk-grid,
+  .opportunity-grid {
+    grid-template-columns: 1fr !important;
+    gap: 14px !important;
+  }
+
+  .risk-card,
+  .op-card {
+    min-height: 0 !important;
+    padding: 20px !important;
+  }
+
+  .summary-combined-page .risk-card h3,
+  .summary-combined-page .op-card h3 { font-size: 25px !important; }
+  .summary-combined-page .risk-card span,
+  .summary-combined-page .op-card p { font-size: 15px !important; }
+
+  .plan-heatmap-page::after { display: none !important; }
+  .plan-list { margin-top: 0 !important; }
+  .plan-list header { display: none !important; }
+  .plan-step {
+    display: grid !important;
+    grid-template-columns: 90px minmax(0, 1fr) !important;
+    gap: 14px !important;
+    min-height: 0 !important;
+    padding: 16px 14px !important;
+  }
+  .plan-step b { font-size: 16px !important; }
+
+  .plan-heatmap-page .heatmap-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 10px !important;
+  }
+  .plan-heatmap-page .heatmap-card {
+    min-height: 118px !important;
+    padding: 16px !important;
+  }
+  .plan-heatmap-page .heatmap-card h3 {
+    white-space: normal !important;
+    font-size: 9px !important;
+    line-height: 1.35 !important;
+  }
+
+  .floating-pdf-button {
+    right: 14px;
+    bottom: calc(14px + env(safe-area-inset-bottom));
+    min-height: 50px;
+    padding: 0 19px;
+    font-size: 14px;
+  }
 }
