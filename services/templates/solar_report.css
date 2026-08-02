@@ -3157,3 +3157,14 @@ body {
     font-size: 36px;
   }
 }
+
+/* PDF page 2: balance the two blocks vertically on the fixed A4 canvas. */
+@media print {
+  .overview-page {
+    padding-top: 25mm;
+  }
+
+  .overview-theme-head {
+    margin-top: 11mm !important;
+  }
+}
