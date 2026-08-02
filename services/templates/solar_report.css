@@ -3134,6 +3134,10 @@ body {
     background: transparent !important;
   }
 
+  .overview-page {
+    padding-top: calc(26mm - 20px);
+  }
+
   .core svg {
     width: min(49mm, 100%);
     max-width: 100%;
