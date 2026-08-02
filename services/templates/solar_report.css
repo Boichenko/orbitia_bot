@@ -3111,3 +3111,28 @@ body {
     font-size: 14px;
   }
 }
+
+/* Desktop web report: one centered column on a continuous, seamless canvas. */
+@media screen and (min-width: 761px) {
+  html,
+  body {
+    min-height: 100%;
+    background:
+      radial-gradient(ellipse 520px 760px at calc(50% - 60px) 120px, rgba(45, 29, 94, .58) 0%, rgba(26, 18, 62, .35) 47%, transparent 78%),
+      radial-gradient(ellipse 470px 520px at calc(50% + 220px) 48%, rgba(19, 13, 52, .30), transparent 76%),
+      linear-gradient(180deg, #070819 0%, #030415 62%, #020313 100%);
+    background-attachment: fixed;
+  }
+
+  .page {
+    margin-left: auto !important;
+    margin-right: auto !important;
+    background: transparent !important;
+  }
+
+  .core svg {
+    width: min(49mm, 100%);
+    max-width: 100%;
+    height: auto;
+  }
+}
