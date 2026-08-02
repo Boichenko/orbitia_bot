@@ -1781,7 +1781,7 @@ body {
   overflow: hidden;
   padding: 0;
   border: .25mm solid rgba(239, 239, 232, .88);
-  border-radius: 7.7mm 7.7mm 0 0;
+  border-radius: 0;
   background:
     radial-gradient(ellipse 111mm 164mm at 42% 16%, rgba(45, 29, 94, .58) 0%, rgba(26, 18, 62, .35) 47%, transparent 78%),
     radial-gradient(ellipse 103mm 114mm at 76% 54%, rgba(19, 13, 52, .30), transparent 76%),
@@ -1796,45 +1796,48 @@ body {
 .cover-content {
   position: absolute;
   z-index: 2;
-  inset: 34.9mm 10mm auto;
+  top: 50%;
+  left: 28mm;
+  right: 28mm;
+  transform: translateY(-50%);
 }
 
 .cover-kicker {
   display: flex;
   align-items: center;
-  gap: 4.8mm;
+  gap: 2.4mm;
   color: #aaa69c;
-  font-size: 14px;
+  font-size: 7px;
   font-weight: 400;
-  letter-spacing: 5px;
+  letter-spacing: 2.5px;
   line-height: 1;
   text-transform: uppercase;
 }
 
 .cover-kicker::before {
   content: "";
-  width: 12.2mm;
-  height: .4mm;
-  flex: 0 0 12.2mm;
+  width: 6.1mm;
+  height: .25mm;
+  flex: 0 0 6.1mm;
   background: #c9952c;
 }
 
 .cover-content h1 {
-  margin: 13.2mm 0 0;
+  margin: 6.6mm 0 0;
   color: #efb238;
   font-family: "Cormorant Garamond", Georgia, serif;
-  font-size: 88px;
+  font-size: 44px;
   font-weight: 400;
-  letter-spacing: -2px;
+  letter-spacing: -1px;
   line-height: .92;
 }
 
 .cover-content > p {
-  margin: 12.2mm 0 0;
+  margin: 6.1mm 0 0;
   max-width: none;
   color: #aaa69f;
   font-family: "Cormorant Garamond", Georgia, serif;
-  font-size: 31px;
+  font-size: 15.5px;
   font-style: italic;
   line-height: 1.12;
 }
@@ -1842,10 +1845,10 @@ body {
 .cover-meta {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  column-gap: 9.3mm;
-  row-gap: 13.5mm;
-  margin: 22mm 0 0;
-  padding-top: 20.6mm;
+  column-gap: 4.65mm;
+  row-gap: 6.75mm;
+  margin: 11mm 0 0;
+  padding-top: 10.3mm;
   border-top: .25mm solid rgba(195, 151, 64, .34);
 }
 
@@ -1856,18 +1859,18 @@ body {
 
 .cover-meta dt {
   color: #827f7c;
-  font-size: 12px;
+  font-size: 6px;
   font-weight: 400;
-  letter-spacing: 4px;
+  letter-spacing: 2px;
   line-height: 1;
   text-transform: uppercase;
 }
 
 .cover-meta dd {
-  margin: 4.8mm 0 0;
+  margin: 2.4mm 0 0;
   color: #ece7dc;
   font-family: "Cormorant Garamond", Georgia, serif;
-  font-size: 23px;
+  font-size: 11.5px;
   font-weight: 400;
   line-height: 1.22;
 }
@@ -1875,15 +1878,15 @@ body {
 .cover-meta .cover-score {
   display: flex;
   align-items: baseline;
-  gap: 2.4mm;
+  gap: 1.2mm;
   color: #efad27;
-  font-size: 38px;
+  font-size: 19px;
   line-height: 1;
 }
 
 .cover-meta .cover-score span {
   color: #77747b;
-  font-size: 33px;
+  font-size: 16.5px;
 }
 
 .cover-star {
