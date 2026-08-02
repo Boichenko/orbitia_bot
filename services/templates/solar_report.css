@@ -3135,7 +3135,11 @@ body {
   }
 
   .overview-page {
-    padding-top: calc(26mm - 67px);
+    padding-top: calc(26mm - 37px);
+  }
+
+  .overview-theme-head {
+    margin-top: 11mm !important;
   }
 
   .core svg {
