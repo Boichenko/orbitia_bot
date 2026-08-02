@@ -3136,3 +3136,12 @@ body {
     height: auto;
   }
 }
+
+@media screen {
+  .battery .battery-value,
+  .battery-value-light,
+  .battery-value-dark {
+    color: #d6b56d;
+    font-size: 36px;
+  }
+}
