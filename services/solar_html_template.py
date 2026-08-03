@@ -10,6 +10,8 @@ import struct
 import xml.sax.saxutils as saxutils
 import zlib
 
+from services.report_json import normalize_solar_report
+
 
 _ROOT = Path(__file__).resolve().parent.parent
 _TEMPLATE_DIR = Path(__file__).resolve().parent / "templates"
@@ -54,6 +56,9 @@ _CATEGORY_ORDER = [
 
 def render_solar_html(report: dict, *, pdf_url: str | None = None) -> str:
     """Render a complete HTML document from normalized solar JSON."""
+    # Public reports keep their source JSON. Re-apply the current A4 content
+    # contract here as well, so the browser never drifts from a newly generated PDF.
+    report = normalize_solar_report(report)
     cover = report.get("cover") or {}
     theme = report.get("main_theme") or {}
     cards = _sphere_cards(report)
