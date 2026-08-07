@@ -1896,11 +1896,11 @@ async def _generate_synastry_analysis(
         )
     _log_generated_event(from_user.id, data, "synastry")
 
+    # The document stays available via the public download button below.
     try:
-        await answer_target.answer_document(FSInputFile(output_path, filename=display_filename))
         await file_status.delete()
     except Exception:
-        await file_status.edit_text("Готово ✅ (файл выше)")
+        pass
     finally:
         if os.path.exists(output_path):
             os.remove(output_path)
