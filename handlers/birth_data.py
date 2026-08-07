@@ -1882,6 +1882,17 @@ async def _generate_synastry_analysis(
         response_text=buffer,
         filename=display_filename,
     )
+    public_report = None
+    if report_json:
+        from services.public_reports import create_public_report
+
+        public_report = create_public_report(
+            report_type="synastry",
+            pdf_source_path=output_path,
+            filename=display_filename,
+            report_json=report_json,
+            owner_key=f"bot:synastry:{from_user.id}:{job_id or int(time.time())}",
+        )
     _log_generated_event(from_user.id, data, "synastry")
 
     try:
@@ -1893,8 +1904,16 @@ async def _generate_synastry_analysis(
         if os.path.exists(output_path):
             os.remove(output_path)
 
+    result_rows = []
+    if public_report:
+        result_rows.extend(
+            [
+                [InlineKeyboardButton(text="🌐 Открыть отчёт", url=public_report.report_url)],
+                [InlineKeyboardButton(text="📥 Скачать PDF", url=public_report.pdf_url)],
+            ]
+        )
     kb = InlineKeyboardMarkup(
-        inline_keyboard=[
+        inline_keyboard=result_rows + [
             [InlineKeyboardButton(text="💞 Рассчитать ещё одну синастрию", callback_data="restart:synastry")],
             [InlineKeyboardButton(text="🪐 Рассчитать натальную карту", callback_data="restart:natal")],
             [InlineKeyboardButton(text="🌞 Рассчитать соляр", callback_data="restart:solar")],
