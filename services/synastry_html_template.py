@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import base64
 import math
 from pathlib import Path
 import xml.sax.saxutils as saxutils
@@ -10,9 +11,10 @@ import xml.sax.saxutils as saxutils
 _TEMPLATE_DIR = Path(__file__).resolve().parent / "templates"
 _HTML_TEMPLATE = _TEMPLATE_DIR / "synastry_report.html"
 _CSS_TEMPLATE = _TEMPLATE_DIR / "synastry_report.css"
+_FONT_DIR = _TEMPLATE_DIR.parent.parent / "assets" / "fonts"
 
 
-def render_synastry_html(report: dict) -> str:
+def render_synastry_html(report: dict, *, pdf_url: str | None = None) -> str:
     cover = report.get("cover") or {}
     formula = report.get("formula") or {}
     emotions = report.get("emotions") or {}
@@ -30,44 +32,50 @@ def render_synastry_html(report: dict) -> str:
     overall = _score(cover.get("overall_score"), _average_score(cards))
     chemistry_score = _score(chemistry.get("score"), 8)
     longterm_score = _score(longterm.get("score"), 8)
+    communication_score = _score(next((item.get("score") for item in cards if item.get("key") == "communication"), 6), 6)
+    cover_label, cover_names = _cover_title_parts(cover.get("title"))
 
     values = {
-        "SYNASTRY_REPORT_CSS": _read_text(_CSS_TEMPLATE),
-        "COVER_TITLE": _safe(cover.get("title"), "Синастрия"),
+        "SYNASTRY_REPORT_CSS": _font_face_css() + _read_text(_CSS_TEMPLATE),
+        "COVER_LABEL": _safe(cover_label),
+        "COVER_NAMES": _safe(cover_names),
         "COVER_SUBTITLE": _safe(cover.get("subtitle"), "Разбор совместимости по ключевым сферам отношений."),
         "CONNECTION_TYPE": _safe(cover.get("connection_type")),
         "MAIN_RESOURCE": _safe(cover.get("main_resource")),
         "MAIN_RISK": _safe(cover.get("main_risk")),
         "OVERALL_SCORE": str(overall),
+        "OVERALL_NOTE": _safe(_compatibility_note(overall)),
+        "CONNECTION_NOTE": _safe(_connection_note(cover.get("connection_type"))),
         "SCORE_WORDS": _word_chips(cover.get("score_words")),
         "COVER_METRICS": _cover_metrics(cards),
         "MAP_ROWS": _map_rows(cards),
         "RADAR_SVG": _radar_svg(cards),
         "FORMULA_TITLE": _safe(formula.get("title"), "Формула пары"),
         "FORMULA_PHRASE": _safe(formula.get("phrase")),
-        "FORMULA_TEXT": _safe(formula.get("text")),
-        "FORMULA_BARS": _value_bars(formula.get("indicators"), 5),
-        "EMOTION_SCALES": _emotion_scales(emotions.get("scales")),
-        "EMOTIONS_SUMMARY": _safe(emotions.get("summary")),
-        "EMOTIONS_SUPPORT": _list_items(emotions.get("support"), 3),
-        "EMOTIONS_MISMATCH": _list_items(emotions.get("mismatch"), 3),
+        "FORMULA_TEXT": _paragraph_markup(formula.get("text")),
+        "FORMULA_BARS": _formula_cards(formula.get("indicators")),
+        "EMOTION_SCALES": _emotion_profile(emotions.get("scales")),
+        "EMOTIONS_SUMMARY": _paragraph_markup(emotions.get("summary")),
+        "EMOTIONS_SUPPORT": _list_items(emotions.get("support"), 4),
+        "EMOTIONS_MISMATCH": _list_items(emotions.get("mismatch"), 4),
         "EMOTIONS_FACTORS": _factor_cards(emotions.get("factors")),
         "CHEMISTRY_SCORE": str(chemistry_score),
         "CHEMISTRY_FILL": str(chemistry_score * 10),
         "CHEMISTRY_LABEL": _safe(chemistry.get("label"), "Притяжение"),
-        "CHEMISTRY_SUMMARY": _safe(chemistry.get("summary")),
-        "CHEMISTRY_AMPLIFIES": _list_items(chemistry.get("amplifies"), 3),
-        "CHEMISTRY_DIMS": _list_items(chemistry.get("dims"), 3),
-        "CHEMISTRY_PARAMETERS": _value_bars(chemistry.get("parameters"), 4),
+        "CHEMISTRY_SUMMARY": _paragraph_markup(chemistry.get("summary")),
+        "CHEMISTRY_AMPLIFIES": _list_items(chemistry.get("amplifies"), 4),
+        "CHEMISTRY_DIMS": _list_items(chemistry.get("dims"), 4),
+        "CHEMISTRY_PARAMETERS": _chemistry_profile(chemistry.get("parameters")),
         "CHEMISTRY_FACTORS": _factor_cards(chemistry.get("factors")),
         "FIRST_LOVE_NAME": _safe(first_love.get("name"), "Первый партнёр"),
-        "FIRST_LOVE_ITEMS": _love_items(first_love.get("items")),
+        "FIRST_LOVE_ITEMS": _love_profile(first_love.get("items")),
         "PARTNER_LOVE_NAME": _safe(partner_love.get("name"), "Партнёр"),
-        "PARTNER_LOVE_ITEMS": _love_items(partner_love.get("items")),
+        "PARTNER_LOVE_ITEMS": _love_profile(partner_love.get("items")),
         "LOVE_BRIDGE": _safe(love.get("bridge"), "переводить ожидания в слова"),
         "LOVE_SUMMARY": _safe(love.get("summary")),
         "LOVE_TRANSLATIONS": _translation_rows(love.get("translations")),
         "COMMUNICATION_SUMMARY": _safe(communication.get("summary")),
+        "COMMUNICATION_SCORE": str(communication_score),
         "TRANSLATOR_ROWS": _translator_rows(communication.get("rows")),
         "COMMUNICATION_MISTAKES": _mistake_cards(communication.get("mistakes")),
         "TRIGGER_CARDS": _trigger_cards(report.get("triggers")),
@@ -80,10 +88,13 @@ def render_synastry_html(report: dict) -> str:
         "FIRST_INFLUENCE_TITLE": _safe(first_influence.get("title")),
         "FIRST_INFLUENCE_ITEMS": _list_items(first_influence.get("items"), 4),
         "FIRST_INFLUENCE_NOTE": _first_list_item(first_influence.get("items")),
+        "FIRST_INFLUENCE_BARS": _influence_bars(first_influence.get("items")),
         "PARTNER_INFLUENCE_TITLE": _safe(partner_influence.get("title")),
         "PARTNER_INFLUENCE_ITEMS": _list_items(partner_influence.get("items"), 4),
         "PARTNER_INFLUENCE_NOTE": _first_list_item(partner_influence.get("items")),
+        "PARTNER_INFLUENCE_BARS": _influence_bars(partner_influence.get("items")),
         "RESOURCE_CARDS": _resource_cards(report.get("resources")),
+        "RESOURCE_AVAILABILITY": _resource_availability(report.get("resources")),
         "RISK_CARDS": _risk_cards(report.get("risks")),
         "RECOMMENDATIONS": _recommendations(report.get("recommendations")),
         "FINAL_TITLE": _safe(final.get("title"), "Итоговая формула"),
@@ -92,6 +103,10 @@ def render_synastry_html(report: dict) -> str:
         "FINAL_BREAKS": _safe(final.get("breaks")),
         "FINAL_GROWTH": _safe(final.get("growth")),
         "FINAL_LENGTH_CLASS": _final_length_class(final.get("text")),
+        "WEB_DOWNLOAD_BUTTON": (
+            f'<a class="floating-pdf-button" href="{_safe(pdf_url)}" download>Скачать PDF</a>'
+            if pdf_url else ""
+        ),
     }
 
     html = _read_text(_HTML_TEMPLATE)
@@ -104,8 +119,64 @@ def _read_text(path: Path) -> str:
     return path.read_text(encoding="utf-8")
 
 
+def _font_face_css() -> str:
+    fonts = [
+        ("Cormorant Garamond", "CormorantGaramond-Regular.ttf", "normal", 400),
+        ("Cormorant Garamond", "CormorantGaramond-Italic.ttf", "italic", 400),
+        ("Manrope", "Manrope-Regular.ttf", "normal", 400),
+        ("Manrope", "Manrope-Medium.ttf", "normal", 500),
+        ("Manrope", "Manrope-Medium.ttf", "normal", 600),
+        ("Manrope", "Manrope-Medium.ttf", "normal", 700),
+        ("Manrope", "Manrope-Medium.ttf", "normal", 800),
+        ("JetBrains Mono", "JetBrainsMono-Regular.ttf", "normal", 400),
+    ]
+    rules = []
+    for family, filename, style, weight in fonts:
+        path = _FONT_DIR / filename
+        if not path.exists():
+            continue
+        data = base64.b64encode(path.read_bytes()).decode("ascii")
+        rules.append(
+            "@font-face{"
+            f"font-family:'{family}';font-style:{style};font-weight:{weight};"
+            f"font-display:block;src:url(data:font/ttf;base64,{data}) format('truetype');"
+            "}"
+        )
+    return "".join(rules)
+
+
+def _cover_title_parts(value) -> tuple[str, str]:
+    title = str(value or "").strip()
+    prefix = "Синастрия"
+    if title.casefold().startswith(prefix.casefold()):
+        names = title[len(prefix):].strip(" :—-–")
+        return prefix, names or "Анна и Александр"
+    return prefix, title or "Анна и Александр"
+
+
+def _compatibility_note(score: int) -> str:
+    if score >= 8:
+        return "Высокая, но требующая зрелости. Не «лёгкая» пара - глубокая."
+    if score >= 6:
+        return "Потенциал есть, если не избегать честных разговоров и договорённостей."
+    return "Связь требует бережности, ясных границ и готовности работать над контактом."
+
+
+def _connection_note(connection_type) -> str:
+    text = str(connection_type or "").strip().lower()
+    if "трансформ" in text or "глубок" in text:
+        return "Отношения, которые меняют обоих. Из них сложно выйти прежними."
+    return "Связь раскрывается через взаимное внимание, ясность и уважение к различиям."
+
+
 def _safe(value, fallback: str = "") -> str:
     return saxutils.escape(str(value if value not in (None, "") else fallback))
+
+
+def _paragraph_markup(value) -> str:
+    """Keep intentional paragraph breaks from the report JSON in the formula card."""
+    text = _safe(value)
+    return text.replace("\r\n", "\n").replace("\n\n", "<br><br>").replace("\n", "<br>")
 
 
 def _score(value, fallback: int = 5) -> int:
@@ -165,7 +236,7 @@ def _cover_metrics(cards: list[dict]) -> str:
     return "".join(
         f"""
         <article>
-          <span>{_safe(card.get("title"))}</span>
+          <span>{_safe({"communication": "Слова", "longterm": "Будущее"}.get(card.get("key"), card.get("title")))}</span>
           <b>{_score(card.get("score"))}/10</b>
         </article>
         """
@@ -174,10 +245,19 @@ def _cover_metrics(cards: list[dict]) -> str:
 
 
 def _map_rows(cards: list[dict]) -> str:
+    titles = {
+        "emotions": "Эмоциональная связь",
+        "chemistry": "Химия и притяжение",
+        "communication": "Коммуникация",
+        "sex": "Секс и инициатива",
+        "longterm": "Долгосрочность",
+        "home": "Быт и совместные действия",
+        "risks": "Риски и напряжение",
+    }
     return "".join(
         f"""
         <div class="score-row">
-          <span>{_safe(card.get("title"))}</span>
+          <span>{_safe(titles.get(card.get("key"), card.get("title")))}</span>
           <b>{_score(card.get("score"))}</b>
         </div>
         """
@@ -217,7 +297,8 @@ def _radar_svg(cards: list[dict]) -> str:
         labels.append(
             f"""
             <text x="{label_x:.2f}" y="{label_y:.2f}" text-anchor="{anchor}" dominant-baseline="middle">
-              {_safe(_radar_label(card.get("title")))}
+              <tspan>{_safe(_radar_label(card.get("title")))}</tspan>
+              <tspan class="radar-score" x="{label_x:.2f}" dy="7">{_score(card.get("score"))}/10</tspan>
             </text>
             """
         )
@@ -269,17 +350,70 @@ def _value_bars(items, limit: int) -> str:
     )
 
 
-def _emotion_scales(items) -> str:
+def _formula_cards(items) -> str:
     if not isinstance(items, list):
         return ""
+    cards = []
+    for item in items[:5]:
+        if not isinstance(item, dict):
+            continue
+        value = _score(item.get("value"))
+        level = "Очень высокая" if value >= 9 else "Высокая" if value >= 7 else "Средняя" if value >= 5 else "Низкая"
+        notes = {
+            "Магнитизм": "Тянет физически и энергетически.",
+            "Спокойствие": "Ровно и скучно тут не бывает.",
+            "Долгосрочность": "Есть из чего строить.",
+            "Простота": "Требует включённости.",
+            "Трансформация": "Оба изменятся.",
+        }
+        cards.append(
+            f'''<article class="formula-factor">
+              <h3>{_safe(item.get("label"))}</h3>
+              <b>{level}</b>
+              <i><em style="--fill:{value * 10}%"></em></i>
+              <p>{_safe(notes.get(str(item.get("label") or ""), "Показывает ключевой ритм этой связи."))}</p>
+            </article>'''
+        )
+    return "".join(cards)
+
+
+def _emotion_profile(items) -> str:
+    if not isinstance(items, list):
+        return ""
+    notes = {
+        "Поддержка": "Оба умеют быть опорой, когда другому плохо.",
+        "Безопасность": "Рядом с партнёром можно снять маску.",
+        "Понимание": "Чувства ловят, но не всегда точно называют.",
+        "Понимание чувств": "Чувства ловят, но не всегда точно называют.",
+        "Интенсивность": "Эмоции сильные — это ресурс и нагрузка одновременно.",
+        "Раздражение": "Долгая близость требует пауз, иначе искрит.",
+        "Риск раздражения": "Долгая близость требует пауз, иначе искрит.",
+    }
     return "".join(
         f"""
-        <div class="emotion-col {'tension' if item.get("tone") == "tension" else ''}">
-          <b>{_score(item.get("value"))}</b>
+        <div class="emotion-row {'tension' if item.get("tone") == "tension" else ''}">
+          <div><span>{_safe(item.get("label"))}</span><b>{_score(item.get("value"))}/10</b></div>
           <i><em style="--fill:{_score(item.get("value")) * 10}%"></em></i>
-          <span>{_safe(item.get("label"))}</span>
+          <small>{_safe(notes.get(str(item.get("label") or ""), "Показывает эмоциональный ритм этой связи."))}</small>
         </div>
         """
+        for item in items[:5]
+        if isinstance(item, dict)
+    )
+
+
+def _chemistry_profile(items) -> str:
+    if not isinstance(items, list):
+        return ""
+    notes = {
+        "Физическое притяжение": "Тело реагирует раньше головы — искра практически мгновенная.",
+        "Сексуальная искра": "Секс между ними — про близость и власть, не про технику.",
+        "Синхронность инициативы": "Кто первым делает шаг — вопрос, о котором стоит договориться.",
+        "Глубина привязанности": "Связь ощущается как «нельзя просто разойтись».",
+        "Риск зависимости": "Интенсивность легко превращается в потребность в партнёре.",
+    }
+    return "".join(
+        f'''<div class="chem-row"><div><span>{_safe(item.get("label"))}</span><b>{_score(item.get("value"))}/10</b></div><i><em style="--fill:{_score(item.get("value")) * 10}%"></em></i><small>{_safe(notes.get(str(item.get("label") or ""), "Показывает динамику притяжения в этой связи."))}</small></div>'''
         for item in items[:5]
         if isinstance(item, dict)
     )
@@ -297,10 +431,32 @@ def _first_list_item(items) -> str:
     return _safe(items[0])
 
 
-def _love_items(items) -> str:
+def _influence_bars(items) -> str:
     if not isinstance(items, list):
         return ""
-    return "".join(f"<span>{_safe(item)}</span>" for item in items[:4])
+    scores = (9, 8, 7, 8)
+    rows = []
+    for index, item in enumerate(items[:4]):
+        label = str(item or "").split(":", 1)[0].strip() or "Ключевая сфера"
+        score = scores[index]
+        rows.append(f'<div class="influence-bar"><div><span>{_safe(label)}</span><b>{score}</b></div><i><em style="--fill:{score * 10}%"></em></i></div>')
+    return "".join(rows)
+
+
+def _love_profile(items) -> str:
+    if not isinstance(items, list):
+        return ""
+    values = [str(item or "").strip() for item in items[:3] if str(item or "").strip()]
+    notes = {
+        "Свобода": "Не переносит давления и нуждается в воздухе внутри близости.",
+        "Искренность": "Важно чувствовать, что его понимают без необходимости защищаться.",
+        "Смысл": "Любит глубокие разговоры и ощущение общего направления.",
+        "Прямота": "Ценит ясные слова вместо намёков и молчаливых ожиданий.",
+        "Действие": "Показывает любовь делом, заботой и практической надёжностью.",
+        "Устойчивость": "Ему важно знать, что отношения можно выбирать каждый день.",
+    }
+    bullets = "".join(f"<li>{_safe(notes.get(value, f'Проявляет любовь через {value.lower()}'))}</li>" for value in values)
+    return f'<div class="love-keys">{_safe(", ".join(values))}</div><ul>{bullets}</ul>'
 
 
 def _translator_rows(items) -> str:
@@ -310,11 +466,10 @@ def _translator_rows(items) -> str:
         f"""
         <div class="translator-row">
           <b>{_safe(item.get("from"))}</b>
-          <i></i>
           <span>{_safe(item.get("to"))}</span>
         </div>
         """
-        for item in items[:4]
+        for item in items[:5]
         if isinstance(item, dict)
     )
 
@@ -403,18 +558,16 @@ def _trigger_cards(items) -> str:
     if not isinstance(items, list):
         return ""
     cards = []
-    for item in items[:5]:
+    for item in items[:7]:
         if not isinstance(item, dict):
             continue
-        level = min(_score(item.get("level"), 3), 5)
-        dots = "".join("<i></i>" for _ in range(level))
         cards.append(
             f"""
-            <article class="trigger-card">
-              <header><h3>{_safe(item.get("title"))}</h3><span>{dots}</span></header>
-              <p>{_safe(item.get("manifestation"))}</p>
-              <strong>{_safe(item.get("action"))}</strong>
-            </article>
+            <div class="trigger-row">
+              <b>{_safe(item.get("title"))}</b>
+              <span>{_safe(item.get("manifestation"))}</span>
+              <em>{_safe(item.get("action"))}</em>
+            </div>
             """
         )
     return "".join(cards)
@@ -430,7 +583,7 @@ def _pillars(items) -> str:
           <i><em style="--fill:{_score(item.get('value')) * 10}%"></em></i>
         </div>
         """
-        for item in items[:4]
+        for item in items[:5]
         if isinstance(item, dict)
     )
 
@@ -441,22 +594,34 @@ def _resource_cards(items) -> str:
     return "".join(
         f"""
         <article class="resource-card">
-          <span class="resource-index">{index:02d}</span>
           <h3>{_safe(item.get("title"))}</h3>
           <p>{_safe(item.get("text"))}</p>
           <small>Точка опоры пары</small>
         </article>
         """
-        for index, item in enumerate(items[:6], 1)
+        for item in items[:6]
         if isinstance(item, dict)
     )
+
+
+def _resource_availability(items) -> str:
+    if not isinstance(items, list):
+        return ""
+    scores = (10, 9, 8, 8, 7, 7)
+    rows = []
+    for index, item in enumerate(items[:6]):
+        if not isinstance(item, dict):
+            continue
+        score = scores[index]
+        rows.append(f'<div class="resource-meter"><div><span>{_safe(item.get("title"))}</span><b>{score}</b></div><i><em style="--fill:{score * 10}%"></em></i><small>{"работает без усилий" if score >= 9 else "включается при договорённостях" if score >= 8 else "нужен общий проект"}</small></div>')
+    return "".join(rows)
 
 
 def _risk_cards(items) -> str:
     if not isinstance(items, list):
         return ""
     cards = []
-    for item in items[:6]:
+    for item in items[:7]:
         if not isinstance(item, dict):
             continue
         level = _risk_level(item.get("level"))

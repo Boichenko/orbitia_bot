@@ -22,6 +22,7 @@ from services.payments import (
 from services.public_reports import get_public_report, init_public_reports_db
 from services.report_runner import generate_solar_report, generate_synastry_report
 from services.solar_html_template import render_solar_html
+from services.synastry_html_template import render_synastry_html
 
 load_dotenv()
 
@@ -124,10 +125,15 @@ async def startup() -> None:
 @app.get("/r/{token}", response_class=HTMLResponse)
 async def public_report(token: str):
     report = get_public_report(token)
-    if not report or report.report_type != "solar" or not report.report_json:
+    if not report or report.report_type not in {"solar", "synastry"} or not report.report_json:
         raise HTTPException(status_code=404, detail="Отчёт не найден")
+    html = (
+        render_solar_html(report.report_json, pdf_url=report.pdf_url)
+        if report.report_type == "solar"
+        else render_synastry_html(report.report_json, pdf_url=report.pdf_url)
+    )
     return HTMLResponse(
-        render_solar_html(report.report_json, pdf_url=report.pdf_url),
+        html,
         headers={
             "Cache-Control": "private, no-store",
             "X-Robots-Tag": "noindex, nofollow, noarchive",
