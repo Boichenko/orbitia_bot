@@ -1620,7 +1620,7 @@ async def _generate_solar_analysis(
     else:
         teaser = extract_main_theme(buffer)
         if not teaser.strip():
-            teaser = "Разбор готов — основной текст смотри в приложенном файле ниже."
+            teaser = "Разбор готов — полный текст доступен по ссылке ниже."
     teaser += cut_off_note
     try:
         await progress_msg.edit_text(teaser)
@@ -1676,11 +1676,12 @@ async def _generate_solar_analysis(
         )
     _log_generated_event(from_user.id, data, "solar")
 
+    # PDF is available through the public download button below; do not duplicate
+    # it as a large Telegram document message.
     try:
-        await answer_target.answer_document(FSInputFile(output_path, filename=display_filename))
         await file_status.delete()
     except Exception:
-        await file_status.edit_text("Готово ✅ (файл выше)")
+        pass
     finally:
         if os.path.exists(output_path):
             os.remove(output_path)
